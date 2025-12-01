@@ -18,11 +18,11 @@
       ...
     }:
     let
-      import-tree = import ./nix;
+      importme = import ./nix;
     in
     {
-      __functor = _: import-tree.__functor import-tree;
-      inherit (import-tree)
+      __functor = _: importme.__functor importme;
+      inherit (importme)
         __config
         filter
         filterNot

@@ -1,4 +1,4 @@
-# import-tree
+# importme
 
 Recursively imports Nix modules from a directory tree.
 
@@ -6,11 +6,11 @@ Recursively imports Nix modules from a directory tree.
 
 ```nix
 {
-  inputs.import-tree.url = "github:Alb-O/import-tree";
+  inputs.importme.url = "github:Alb-O/importme";
   inputs.flake-parts.url = "github:hercules-ci/flake-parts";
 
   outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; }
-   (inputs.import-tree ./nix);
+   (inputs.importme ./nix);
 }
 ```
 
@@ -18,12 +18,12 @@ By default, paths containing `/_` are ignored.
 
 ## API
 
-### `import-tree <path>`
+### `importme <path>`
 
 Takes a path (or nested list of paths) and returns a module importing all `.nix` files found recursively.
 
 ```nix
-{ imports = [ (import-tree ./nix) ]; }
+{ imports = [ (importme ./nix) ]; }
 ```
 
 ### `.filter` / `.filterNot`
@@ -31,7 +31,7 @@ Takes a path (or nested list of paths) and returns a module importing all `.nix`
 Filter paths by predicate. Multiple filters compose with AND.
 
 ```nix
-import-tree.filter (lib.hasInfix ".mod.") ./nix
+importme.filter (lib.hasInfix ".mod.") ./nix
 ```
 
 ### `.match` / `.matchNot`
@@ -39,7 +39,7 @@ import-tree.filter (lib.hasInfix ".mod.") ./nix
 Filter paths by regex (uses `builtins.match`).
 
 ```nix
-import-tree.match ".*/[a-z]+@(foo|bar)\.nix" ./nix
+importme.match ".*/[a-z]+@(foo|bar)\.nix" ./nix
 ```
 
 ### `.map`
@@ -47,7 +47,7 @@ import-tree.match ".*/[a-z]+@(foo|bar)\.nix" ./nix
 Transform each matched path.
 
 ```nix
-import-tree.map (path: { imports = [ path ]; }) ./nix
+importme.map (path: { imports = [ path ]; }) ./nix
 ```
 
 ### `.addPath`
@@ -55,15 +55,15 @@ import-tree.map (path: { imports = [ path ]; }) ./nix
 Prepend additional paths to search.
 
 ```nix
-(import-tree.addPath ./vendor) ./nix
+(importme.addPath ./vendor) ./nix
 ```
 
 ### `.addAPI`
 
-Extend the import-tree object with custom methods.
+Extend the importme object with custom methods.
 
 ```nix
-import-tree.addAPI {
+importme.addAPI {
   maximal = self: self.addPath ./nix;
   minimal = self: self.maximal.filter (lib.hasInfix "minimal");
 }
@@ -74,7 +74,7 @@ import-tree.addAPI {
 Required before using `.leafs` or `.pipeTo` outside module evaluation.
 
 ```nix
-(import-tree.withLib pkgs.lib).leafs ./nix
+(importme.withLib pkgs.lib).leafs ./nix
 ```
 
 ### `.leafs` / `.files`
@@ -82,7 +82,7 @@ Required before using `.leafs` or `.pipeTo` outside module evaluation.
 Get the list of matched files (requires `.withLib` first).
 
 ```nix
-(import-tree.withLib lib).files
+(importme.withLib lib).files
 ```
 
 ### `.initFilter`
@@ -90,12 +90,12 @@ Get the list of matched files (requires `.withLib` first).
 Replace the default filter (`.nix` files, excluding `/_` paths).
 
 ```nix
-import-tree.initFilter (lib.hasSuffix ".md")
+importme.initFilter (lib.hasSuffix ".md")
 ```
 
 ### `.new`
 
-Returns a fresh import-tree with empty state.
+Returns a fresh `importme` with empty state.
 
 ## Testing
 

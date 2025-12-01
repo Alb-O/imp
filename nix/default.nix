@@ -33,7 +33,7 @@ let
 
           listFilesRecursive =
             x:
-            if isImportTree x then
+            if isimportMe x then
               treeFiles x
             else if hasOutPath x then
               listFilesRecursive x.outPath
@@ -130,7 +130,7 @@ let
 
   hasOutPath = and (x: x ? outPath) builtins.isAttrs;
 
-  isImportTree = and (x: x ? __config.__functor) builtins.isAttrs;
+  isimportMe = and (x: x ? __config.__functor) builtins.isAttrs;
 
   inModuleEval = and (x: x ? options) builtins.isAttrs;
 
@@ -156,7 +156,7 @@ let
             updated = update config;
 
             # current is the result of this functor.
-            # it is not a config, but an import-tree object containing a __config.
+            # it is not a config, but an importme object containing a __config.
             current = config update;
             boundAPI = builtins.mapAttrs (_: g: g current) updated.api;
 

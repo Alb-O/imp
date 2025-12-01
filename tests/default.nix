@@ -1,8 +1,8 @@
-# Unit tests for import-tree
+# Unit tests for importme
 { lib }:
 let
-  import-tree = import ./../nix;
-  it = import-tree;
+  importme = import ./../nix;
+  it = importme;
   lit = it.withLib lib;
 in
 {
@@ -144,7 +144,7 @@ in
     expected = "world";
   };
 
-  addAPI."test extends the API available on an import-tree object" = {
+  addAPI."test extends the API available on an importme object" = {
     expr =
       let
         extended = lit.addAPI { helloOption = self: self.addPath ./fixtures/modules/hello-option; };
@@ -153,7 +153,7 @@ in
     expected = [ ./fixtures/modules/hello-option/mod.nix ];
   };
 
-  addAPI."test preserves previous API extensions on an import-tree object" = {
+  addAPI."test preserves previous API extensions on an importme object" = {
     expr =
       let
         first = lit.addAPI { helloOption = self: self.addPath ./fixtures/modules/hello-option; };
@@ -179,12 +179,12 @@ in
     expected = 1;
   };
 
-  import-tree."test does not break if given a path to a file instead of a directory." = {
+  importme."test does not break if given a path to a file instead of a directory." = {
     expr = lit.leafs ./fixtures/x/y.nix;
     expected = [ ./fixtures/x/y.nix ];
   };
 
-  import-tree."test returns a module with a single imported nested module having leafs" = {
+  importme."test returns a module with a single imported nested module having leafs" = {
     expr =
       let
         oneElement = arr: if lib.length arr == 1 then lib.elemAt arr 0 else throw "Expected one element";
@@ -195,7 +195,7 @@ in
     expected = ./fixtures/x/y.nix;
   };
 
-  import-tree."test evaluates returned module as part of module-eval" = {
+  importme."test evaluates returned module as part of module-eval" = {
     expr =
       let
         res = lib.modules.evalModules { modules = [ (it ./fixtures/modules) ]; };
@@ -204,7 +204,7 @@ in
     expected = "world";
   };
 
-  import-tree."test can itself be used as a module" = {
+  importme."test can itself be used as a module" = {
     expr =
       let
         res = lib.modules.evalModules { modules = [ (it.addPath ./fixtures/modules) ]; };
@@ -213,7 +213,7 @@ in
     expected = "world";
   };
 
-  import-tree."test take as arg anything path convertible" = {
+  importme."test take as arg anything path convertible" = {
     expr = lit.leafs [
       {
         outPath = ./fixtures/modules/hello-world;
@@ -222,7 +222,7 @@ in
     expected = [ ./fixtures/modules/hello-world/mod.nix ];
   };
 
-  import-tree."test passes non-paths without string conversion" = {
+  importme."test passes non-paths without string conversion" = {
     expr =
       let
         mod = it [
@@ -239,7 +239,7 @@ in
     expected = "world";
   };
 
-  import-tree."test can take other import-trees as if they were paths" = {
+  importme."test can take other importmes as if they were paths" = {
     expr = (lit.filter (lib.hasInfix "mod")).leafs [
       (it.addPath ./fixtures/modules/hello-option)
       ./fixtures/modules/hello-world
