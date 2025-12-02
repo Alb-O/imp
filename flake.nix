@@ -18,13 +18,13 @@
       ...
     }:
     let
-      importme = import ./src;
+      imp = import ./src;
       lib = nixpkgs.lib;
     in
     {
       tests = import ./tests { inherit lib; };
     }
-    // removeAttrs importme [
+    // removeAttrs imp [
       "files"
       "result"
     ]
@@ -42,7 +42,7 @@
             ;
         };
         # Dogfooding: use .treeWith to load per-system outputs from ./outputs
-        outputs = importme.treeWith lib (f: f args) ./outputs;
+        outputs = imp.treeWith lib (f: f args) ./outputs;
       in
       outputs
     );

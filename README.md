@@ -1,25 +1,25 @@
-# importme
+# imp 😈
 
-Recursively import Nix files from directories - as NixOS modules or nested attrsets.
+Recursively import Nix files from directories as NixOS modules or nested attrsets.
 
-## Installation
+## Usage
+
+Add `imp` as a flake input:
 
 ```nix
 {
-  inputs.importme.url = "github:Alb-O/importme";
+  inputs.imp.url = "github:Alb-O/imp";
 }
 ```
 
-## Usage Modes
+### Usage as a Module Importer
 
-### 1. Module Importer
-
-Use `importme` as a function to create a NixOS/flake-parts module that imports all `.nix` files from a directory:
+Use `imp` as a function to create a NixOS/flake-parts module that imports all `.nix` files from a directory:
 
 ```nix
 { inputs, ... }:
 {
-  imports = [ (inputs.importme ./modules) ];
+  imports = [ (inputs.imp ./nix) ];
 }
 ```
 
@@ -27,29 +27,29 @@ With flake-parts:
 
 ```nix
 {
-  inputs.importme.url = "github:Alb-O/importme";
+  inputs.imp.url = "github:Alb-O/imp";
   inputs.flake-parts.url = "github:hercules-ci/flake-parts";
 
   outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; }
-    (inputs.importme ./nix);
+    (inputs.imp ./nix);
 }
 ```
 
-### 2. File List Builder
+### Usage as a File List Builder
 
 Chain filters and transforms to get a list of files:
 
 ```nix
 let
-  importme = inputs.importme.withLib lib;
+  imp = inputs.imp.withLib lib;
 in
-importme.filter (lib.hasInfix "/services/").leafs ./modules
+imp.filter (lib.hasInfix "/services/").leafs ./modules
 # Returns: [ ./modules/services/nginx.nix ./modules/services/postgres.nix ... ]
 ```
 
-### 3. Tree Builder
+### Usage as a Tree Builder
 
-Build nested attrsets from directory structure - useful for flake outputs:
+Build nested attrsets from directory structure, e.g. for flake outputs:
 
 ```nix
 # Directory structure:
@@ -60,7 +60,7 @@ Build nested attrsets from directory structure - useful for flake outputs:
 #       foo.nix
 #       bar.nix
 
-importme.treeWith lib import ./outputs
+imp.treeWith lib import ./outputs
 # Returns:
 # {
 #   apps = <imported from apps.nix>;
@@ -74,26 +74,24 @@ importme.treeWith lib import ./outputs
 
 ## Naming Conventions
 
-| Path              | Attribute | Notes                               |
-| ----------------- | --------- | ----------------------------------- |
-| `foo.nix`         | `foo`     |                                     |
-| `foo/default.nix` | `foo`     | Directory with default.nix          |
-| `foo_.nix`        | `foo`     | Trailing `_` escapes reserved names |
-| `_foo.nix`        | (ignored) | Leading `_` means hidden            |
-| `_foo/`           | (ignored) | Hidden directory                    |
-
-The `_` prefix convention allows you to keep helper files or work-in-progress modules in the same directory without importing them.
+| Path              | Attribute | Notes                                      |
+| ----------------- | --------- | ------------------------------------------ |
+| `foo.nix`         | `foo`     | Typical file as a module                   |
+| `foo/default.nix` | `foo`     | Typical directory module with default.nix  |
+| `foo_.nix`        | `foo`     | Trailing `_` escapes reserved names in nix |
+| `_foo.nix`        | (ignored) | Leading `_` means hidden (not imported)    |
+| `_foo/`           | (ignored) | Hidden directory                           |
 
 ## API Reference
 
 ### Core
 
-#### `importme <path>`
+#### `imp <path>`
 
 Import all `.nix` files from a path as a NixOS module.
 
 ```nix
-{ imports = [ (importme ./modules) ]; }
+{ imports = [ (imp ./modules) ]; }
 ```
 
 #### `.withLib <lib>`
@@ -101,7 +99,7 @@ Import all `.nix` files from a path as a NixOS module.
 Required before using `.leafs`, `.files`, `.tree`, or `.treeWith`.
 
 ```nix
-importme.withLib nixpkgs.lib
+imp.withLib nixpkgs.lib
 ```
 
 ### Filtering
@@ -111,8 +109,8 @@ importme.withLib nixpkgs.lib
 Filter paths by predicate. Multiple filters compose with AND.
 
 ```nix
-importme.filter (lib.hasInfix "/services/") ./modules
-importme.filterNot (lib.hasInfix "/deprecated/") ./modules
+imp.filter (lib.hasInfix "/services/") ./modules
+imp.filterNot (lib.hasInfix "/deprecated/") ./modules
 ```
 
 #### `.match <regex>` / `.matchNot <regex>`
@@ -120,16 +118,16 @@ importme.filterNot (lib.hasInfix "/deprecated/") ./modules
 Filter paths by regex (uses `builtins.match`).
 
 ```nix
-importme.match ".*/[a-z]+@(foo|bar)\.nix" ./nix
+imp.match ".*/[a-z]+@(foo|bar)\.nix" ./nix
 ```
 
 #### `.initFilter <predicate>`
 
-Replace the default filter. By default, importme finds `.nix` files and excludes paths containing `/_`.
+Replace the default filter. By default, imp finds `.nix` files and excludes paths containing `/_`.
 
 ```nix
 # Import markdown files instead
-importme.initFilter (lib.hasSuffix ".md") ./docs
+imp.initFilter (lib.hasSuffix ".md") ./docs
 ```
 
 ### Transforming
@@ -139,7 +137,7 @@ importme.initFilter (lib.hasSuffix ".md") ./docs
 Transform each matched path.
 
 ```nix
-importme.map import ./packages
+imp.map import ./packages
 # Returns list of imported values instead of paths
 ```
 
@@ -148,7 +146,7 @@ importme.map import ./packages
 Transform values when using `.tree`. Composes with multiple calls.
 
 ```nix
-(importme.withLib lib)
+(imp.withLib lib)
   .mapTree (drv: drv // { meta.priority = 5; })
   .tree ./packages
 ```
@@ -160,7 +158,7 @@ Transform values when using `.tree`. Composes with multiple calls.
 Build a nested attrset from directory structure. Requires `.withLib`.
 
 ```nix
-(importme.withLib lib).tree ./outputs
+(imp.withLib lib).tree ./outputs
 ```
 
 #### `.treeWith <lib> <transform> <path>`
@@ -169,21 +167,21 @@ Convenience function combining `.withLib`, `.mapTree`, and `.tree`.
 
 ```nix
 # These are equivalent:
-((importme.withLib lib).mapTree (f: f args)).tree ./outputs
-importme.treeWith lib (f: f args) ./outputs
+((imp.withLib lib).mapTree (f: f args)).tree ./outputs
+imp.treeWith lib (f: f args) ./outputs
 ```
 
 Real-world example - loading per-system flake outputs:
 
 ```nix
 {
-  outputs = { self, nixpkgs, importme, ... }:
+  outputs = { self, nixpkgs, imp, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         args = { inherit self pkgs; };
       in
-      importme.treeWith nixpkgs.lib (f: f args) ./outputs
+      imp.treeWith nixpkgs.lib (f: f args) ./outputs
     );
 }
 ```
@@ -205,11 +203,11 @@ Where each file in `./outputs/` is a function taking `args`:
 Get the list of matched files. Requires `.withLib`.
 
 ```nix
-(importme.withLib lib).leafs ./modules
+(imp.withLib lib).leafs ./modules
 # Returns: [ ./modules/foo.nix ./modules/bar.nix ... ]
 
 # Or with pre-configured paths:
-importme.withLib lib
+imp.withLib lib
   |> (i: i.addPath ./modules)
   |> (i: i.filter (lib.hasInfix "/services/"))
   |> (i: i.files)
@@ -220,7 +218,7 @@ importme.withLib lib
 Apply a function to the file list.
 
 ```nix
-(importme.withLib lib).pipeTo builtins.length ./modules
+(imp.withLib lib).pipeTo builtins.length ./modules
 # Returns: 42
 ```
 
@@ -231,7 +229,7 @@ Apply a function to the file list.
 Add additional paths to search.
 
 ```nix
-importme
+imp
   |> (i: i.addPath ./modules)
   |> (i: i.addPath ./vendor)
   |> (i: i.leafs)
@@ -239,11 +237,11 @@ importme
 
 #### `.addAPI <attrset>`
 
-Extend importme with custom methods. Methods receive `self` for chaining.
+Extend imp with custom methods. Methods receive `self` for chaining.
 
 ```nix
 let
-  myImporter = importme.addAPI {
+  myImporter = imp.addAPI {
     services = self: self.filter (lib.hasInfix "/services/");
     packages = self: self.filter (lib.hasInfix "/packages/");
   };
@@ -253,7 +251,7 @@ myImporter.services ./nix
 
 #### `.new`
 
-Returns a fresh importme with empty state, preserving custom API.
+Returns a fresh imp with empty state, preserving custom API.
 
 ## Examples
 
@@ -271,7 +269,7 @@ nixos/
 ```
 
 ```nix
-{ imports = [ (importme ./nixos/modules) ]; }
+{ imports = [ (imp ./nixos/modules) ]; }
 ```
 
 ### Flake with Per-System Outputs
@@ -289,12 +287,12 @@ outputs/
 ```nix
 # flake.nix
 {
-  outputs = { nixpkgs, importme, flake-utils, ... }:
+  outputs = { nixpkgs, imp, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
       in
-      importme.treeWith nixpkgs.lib (f: f { inherit pkgs; }) ./outputs
+      imp.treeWith nixpkgs.lib (f: f { inherit pkgs; }) ./outputs
     );
 }
 
@@ -312,10 +310,10 @@ pkgs.stdenv.mkDerivation { name = "foo"; /* ... */ }
 
 ```nix
 let
-  importme = inputs.importme.withLib lib;
+  imp = inputs.imp.withLib lib;
 
-  serverModules = importme.filter (lib.hasInfix "/server/") ./modules;
-  desktopModules = importme.filter (lib.hasInfix "/desktop/") ./modules;
+  serverModules = imp.filter (lib.hasInfix "/server/") ./modules;
+  desktopModules = imp.filter (lib.hasInfix "/desktop/") ./modules;
 in
 {
   imports = [
@@ -324,11 +322,19 @@ in
 }
 ```
 
-## Testing
+## Development
+
+### Tests
 
 ```sh
 nix run .#tests    # Run unit tests
 nix flake check    # Full check including formatting
+```
+
+### Formatting
+
+```sh
+nix fmt    # Uses treefmt
 ```
 
 ## Attribution

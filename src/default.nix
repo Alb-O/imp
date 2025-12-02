@@ -1,9 +1,9 @@
 # Recursive module importer with filtering and mapping capabilities
 #
 # Can be used as:
-#   - A function: importme ./path -> NixOS module with imports
-#   - A builder: importme.filter(...).map(...).leafs ./path -> list of processed files
-#   - A tree builder: importme.withLib(lib).tree ./path -> nested attrset
+#   - A function: imp ./path -> NixOS module with imports
+#   - A builder: imp.filter(...).map(...).leafs ./path -> list of processed files
+#   - A tree builder: imp.withLib(lib).tree ./path -> nested attrset
 let
   perform =
     {
@@ -39,7 +39,7 @@ let
 
           listFilesRecursive =
             x:
-            if isimportMe x then
+            if isimp x then
               treeFiles x
             else if hasOutPath x then
               listFilesRecursive x.outPath
@@ -133,7 +133,7 @@ let
 
   hasOutPath = and (x: x ? outPath) builtins.isAttrs;
 
-  isimportMe = and (x: x ? __config.__functor) builtins.isAttrs;
+  isimp = and (x: x ? __config.__functor) builtins.isAttrs;
 
   inModuleEval = and (x: x ? options) builtins.isAttrs;
 
