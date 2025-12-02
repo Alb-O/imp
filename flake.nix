@@ -39,6 +39,12 @@
       configTree = imp.configTree;
       configTreeWith = imp.configTreeWith;
 
+      # Flake generation utilities (standalone, no nixpkgs needed)
+      collectInputs = imp.collectInputs;
+      formatInputs = imp.formatInputs;
+      formatFlake = imp.formatFlake;
+      collectAndFormatFlake = imp.collectAndFormatFlake;
+
       # Flake-parts integration
       flakeModules.default = flakeModule;
     }
