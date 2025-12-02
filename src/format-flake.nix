@@ -85,7 +85,6 @@ let
   formatInputOverrides =
     depth: name: overrides:
     let
-      indent = builtins.concatStringsSep "" (builtins.genList (_: "  ") depth);
       overrideNames = builtins.sort builtins.lessThan (builtins.attrNames overrides);
       formatOverride =
         oName:
@@ -181,11 +180,11 @@ let
 
       # Build inputs block with sections
       coreSection =
-        if hasCoreInputs then "    # === Core inputs ===\n    ${formatInputsAt 2 coreInputs}" else "";
+        if hasCoreInputs then "    # Core inputs\n    ${formatInputsAt 2 coreInputs}" else "";
 
       collectedSection =
         if hasCollectedInputs then
-          "    # === Collected from __inputs ===\n    ${formatInputsAt 2 collectedInputs}"
+          "    # Collected from __inputs\n    ${formatInputsAt 2 collectedInputs}"
         else
           "";
 

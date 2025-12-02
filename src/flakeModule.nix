@@ -1,91 +1,7 @@
-/*
-  Flake-parts module for imp.
-
-  Automatically loads flake outputs from a directory structure:
-
-    outputs/
-      perSystem/
-        packages.nix     -> perSystem.packages
-        devShells.nix    -> perSystem.devShells
-      nixosConfigurations/
-        server.nix       -> flake.nixosConfigurations.server
-      overlays.nix       -> flake.overlays
-
-  Usage:
-
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [ inputs.imp.flakeModules.default ];
-
-      imp = {
-        src = ./outputs;
-        args = { inherit inputs; };
-      };
-
-      systems = [ "x86_64-linux" "aarch64-linux" ];
-    };
-
-  The module passes these arguments to each file:
-    - perSystem files: { pkgs, lib, system, self, self', inputs, inputs', ... } // args
-    - flake files: { lib, self, inputs, ... } // args
-
-  User-provided args take precedence over module defaults, allowing you to
-  override lib with a custom extended version (e.g., nixpkgs.lib).
-
-  Files can be:
-    - Functions: called with args, result used as output
-    - Attrsets: used directly as output
-
-  ## Flake File Generation
-
-  Enable flake.nix generation from __inputs declarations:
-
-    imp = {
-      src = ./outputs;
-      flakeFile = {
-        enable = true;
-        path = ./flake.nix;
-        coreInputs = import ./inputs/core.nix;
-        description = "My flake";
-      };
-    };
-
-  Then run `nix run .#gen-flake` to regenerate flake.nix.
-
-  ## Declaring Inputs with __inputs
-
-  Files can declare their required flake inputs inline using `__inputs`.
-  These are collected and merged into the generated flake.nix.
-
-  ### With __functor (for files that need args)
-
-  Use this pattern when your output needs access to inputs, pkgs, etc:
-
-    # outputs/perSystem/formatter.nix
-    {
-      __inputs.treefmt-nix.url = "github:numtide/treefmt-nix";
-
-      __functor = _: { pkgs, inputs, ... }:
-        inputs.treefmt-nix.lib.evalModule pkgs { ... };
-    }
-
-  The `_:` is required because __functor receives self as first argument.
-
-  ### Without __functor (for static data)
-
-  If your file just returns static data but still declares inputs
-  (e.g., for documentation or to ensure the input is available):
-
-    # outputs/overlays.nix
-    {
-      __inputs.my-overlay-source.url = "github:owner/repo";
-
-      default = final: prev: {
-        # overlay contents
-      };
-    }
-
-  The __inputs are collected, but the rest of the attrset is used as-is.
-*/
+# Flake-parts module for imp.
+#
+# Automatically loads flake outputs from a directory structure.
+# See option descriptions below for usage details.
 {
   lib,
   flake-parts-lib,
@@ -108,7 +24,8 @@ let
 
   cfg = config.imp;
 
-  # Build tree from a directory, calling each file with args
+  # Build tree from a directory, calling each file with args.
+  # Handles both functions and attrsets with __functor.
   buildTree =
     dir: args:
     if builtins.pathExists dir then
@@ -116,7 +33,6 @@ let
     else
       { };
 
-  # Determine if a name is a perSystem output
   isPerSystemDir = name: name == cfg.perSystemDir;
 
   # Get flake-level outputs (everything except perSystem dir)
@@ -158,19 +74,38 @@ in
       src = mkOption {
         type = types.nullOr types.path;
         default = null;
-        description = "Directory containing flake outputs to import";
+        description = ''
+          Directory containing flake outputs to import.
+
+          Example structure:
+            outputs/
+              perSystem/
+                packages.nix     -> perSystem.packages
+                devShells.nix    -> perSystem.devShells
+              nixosConfigurations/
+                server.nix       -> flake.nixosConfigurations.server
+              overlays.nix       -> flake.overlays
+        '';
       };
 
       args = mkOption {
         type = types.attrsOf types.unspecified;
         default = { };
-        description = "Extra arguments passed to all imported files";
+        description = ''
+          Extra arguments passed to all imported files.
+
+          Files receive: { lib, self, inputs, ... } // args (for flake outputs)
+          Or: { pkgs, lib, system, self, self', inputs, inputs', ... } // args (for perSystem)
+
+          User-provided args take precedence, allowing you to override lib
+          with a custom extended version.
+        '';
       };
 
       perSystemDir = mkOption {
         type = types.str;
         default = "perSystem";
-        description = "Subdirectory name for per-system outputs";
+        description = "Subdirectory name for per-system outputs.";
       };
 
       flakeFile = {
@@ -179,31 +114,39 @@ in
         path = mkOption {
           type = types.path;
           default = self + "/flake.nix";
-          description = "Path to flake.nix file to generate/check";
+          description = "Path to flake.nix file to generate/check.";
         };
 
         description = mkOption {
           type = types.str;
           default = "";
-          description = "Flake description";
+          description = "Flake description field.";
         };
 
         coreInputs = mkOption {
           type = types.attrsOf types.unspecified;
           default = { };
-          description = "Core inputs that are always included (e.g., nixpkgs, flake-parts)";
+          description = ''
+            Core inputs always included in flake.nix (e.g., nixpkgs, flake-parts).
+
+            Example:
+              coreInputs = {
+                nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+                flake-parts.url = "github:hercules-ci/flake-parts";
+              };
+          '';
         };
 
         outputsFile = mkOption {
           type = types.str;
           default = "./outputs.nix";
-          description = "Path to outputs.nix (relative to flake.nix)";
+          description = "Path to outputs.nix (relative to flake.nix).";
         };
 
         header = mkOption {
           type = types.str;
           default = "# Auto-generated by imp - DO NOT EDIT\n# Regenerate with: nix run .#gen-flake";
-          description = "Header comment for generated flake.nix";
+          description = "Header comment for generated flake.nix.";
         };
       };
     };
@@ -215,7 +158,7 @@ in
           args = mkOption {
             type = types.attrsOf types.unspecified;
             default = { };
-            description = "Extra per-system arguments passed to imported files";
+            description = "Extra per-system arguments passed to imported files.";
           };
         };
       }
@@ -225,10 +168,8 @@ in
   config = lib.mkMerge [
     # Main imp config
     (lib.mkIf (cfg.src != null) {
-      # Flake-level outputs
       flake = flakeTree;
 
-      # Per-system outputs
       perSystem =
         {
           pkgs,
@@ -262,7 +203,24 @@ in
       perSystem =
         { pkgs, ... }:
         {
-          # App to regenerate flake.nix
+          # Regenerate flake.nix from __inputs declarations.
+          #
+          # Files can declare inputs inline:
+          #
+          #   # With __functor (when file needs args like pkgs, inputs):
+          #   {
+          #     __inputs.treefmt-nix.url = "github:numtide/treefmt-nix";
+          #     __functor = _: { pkgs, inputs, ... }:
+          #       inputs.treefmt-nix.lib.evalModule pkgs { ... };
+          #   }
+          #
+          #   # Without __functor (static data that declares inputs):
+          #   {
+          #     __inputs.foo.url = "github:owner/foo";
+          #     someKey = "value";
+          #   }
+          #
+          # Run: nix run .#gen-flake
           apps.gen-flake = {
             type = "app";
             program = toString (
@@ -271,9 +229,11 @@ in
                 echo "Generated flake.nix"
               ''
             );
+            meta.description = "Regenerate flake.nix from __inputs declarations";
           };
 
-          # Check that flake.nix is up-to-date
+          # Checks that flake.nix matches what would be generated.
+          # Fails if flake.nix is out of sync with __inputs declarations.
           checks.flake-up-to-date =
             pkgs.runCommand "flake-up-to-date"
               {

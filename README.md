@@ -81,14 +81,15 @@ imp.treeWith lib import ./outputs
 
 Full API documentation with examples is inline in the source:
 
-| File                                         | Purpose                                         |
-| -------------------------------------------- | ----------------------------------------------- |
-| [`src/api.nix`](src/api.nix)                 | All chainable methods (filter, map, tree, etc.) |
-| [`src/collect.nix`](src/collect.nix)         | File collection & filtering logic               |
-| [`src/tree.nix`](src/tree.nix)               | Tree building from directories                  |
-| [`src/configTree.nix`](src/configTree.nix)   | NixOS/Home Manager config modules               |
-| [`src/flakeModule.nix`](src/flakeModule.nix) | Flake-parts integration module                  |
-| [`src/lib.nix`](src/lib.nix)                 | Internal utilities                              |
+| File                                               | Purpose                                         |
+| -------------------------------------------------- | ----------------------------------------------- |
+| [`src/api.nix`](src/api.nix)                       | All chainable methods (filter, map, tree, etc.) |
+| [`src/collect.nix`](src/collect.nix)               | File collection & filtering logic               |
+| [`src/tree.nix`](src/tree.nix)                     | Tree building from directories                  |
+| [`src/configTree.nix`](src/configTree.nix)         | NixOS/Home Manager config modules               |
+| [`src/flakeModule.nix`](src/flakeModule.nix)       | Flake-parts integration module                  |
+| [`src/lib.nix`](src/lib.nix)                       | Internal utilities                              |
+| [`src/collect-inputs.nix`](src/collect-inputs.nix) | Collect `__inputs` declarations from files      |
 
 ### Overview
 
@@ -104,14 +105,18 @@ Full API documentation with examples is inline in the source:
 | `.configTree <path>`          | Directory structure → option paths   |
 | `.leafs <path>`               | Get list of matched files            |
 | `.addAPI <attrset>`           | Extend with custom methods           |
+| `.collectInputs <path>`       | Collect `__inputs` from directory    |
 
 ### flake-parts Module Options
 
-| Option             | Type   | Default     | Description                      |
-| ------------------ | ------ | ----------- | -------------------------------- |
-| `imp.src`          | path   | null        | Directory containing outputs     |
-| `imp.args`         | attrs  | {}          | Extra args passed to all files   |
-| `imp.perSystemDir` | string | "perSystem" | Subdirectory name for per-system |
+| Option                    | Type   | Default        | Description                          |
+| ------------------------- | ------ | -------------- | ------------------------------------ |
+| `imp.src`                 | path   | null           | Directory containing outputs         |
+| `imp.args`                | attrs  | {}             | Extra args passed to all files       |
+| `imp.perSystemDir`        | string | "perSystem"    | Subdirectory name for per-system     |
+| `imp.flakeFile.enable`    | bool   | false          | Enable flake.nix generation          |
+| `imp.flakeFile.coreInputs`| attrs  | {}             | Core inputs always in flake.nix      |
+| `imp.flakeFile.outputsFile`| string| "./outputs.nix"| Path to outputs file from flake.nix  |
 
 Files in `perSystem/` receive: `{ pkgs, lib, system, self, self', inputs, inputs', ... }`
 
@@ -152,6 +157,68 @@ in
 }
 ```
 
+### Collect Inputs
+
+Declare `__inputs` inline where they're used. The flake-parts module collects them automatically:
+
+```nix
+# nix/outputs/perSystem/formatter.nix
+{
+  __inputs.treefmt-nix.url = "github:numtide/treefmt-nix";
+
+  __functor = _: { pkgs, inputs, ... }:
+    inputs.treefmt-nix.lib.evalModule pkgs {
+      projectRootFile = "flake.nix";
+      programs.nixfmt.enable = true;
+    };
+}
+```
+
+```nix
+# nix/outputs/homeConfigurations/alice@workstation.nix
+{
+  __inputs.home-manager = {
+    url = "github:nix-community/home-manager";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+
+  __functor = _: { inputs, nixpkgs, imp, ... }:
+    inputs.home-manager.lib.homeManagerConfiguration {
+      pkgs = nixpkgs.legacyPackages.x86_64-linux;
+      modules = [ (imp ../../home/alice) ];
+    };
+}
+```
+
+Enable flake generation to auto-collect inputs into `flake.nix`:
+
+```nix
+# nix/flake/default.nix
+inputs:
+flake-parts.lib.mkFlake { inherit inputs; } {
+  imports = [ inputs.imp.flakeModules.default ];
+
+  imp = {
+    src = ../outputs;
+    flakeFile = {
+      enable = true;
+      coreInputs = import ./inputs.nix;
+      outputsFile = "./nix/flake";
+    };
+  };
+}
+```
+
+```nix
+# flake.nix (auto-generated)
+{
+  inputs = { /* ... */ };
+  outputs = inputs: import ./nix/flake inputs;
+}
+```
+
+Then run `nix run .#gen-flake` to regenerate `flake.nix` with collected inputs.
+
 ## Development
 
 ```sh
@@ -162,8 +229,9 @@ nix fmt            # Format with treefmt
 
 ## Attribution
 
-- Originally written by @vic as [import-tree](https://github.com/vic/import-tree)
-- `.tree` inspired by [flakelight](https://github.com/nix-community/flakelight)
+- Import features originally written by @vic in [import-tree](https://github.com/vic/import-tree).
+- `.collectInputs` inspired by @vic's [flake-file](https://github.com/vic/flake-file).
+- `.tree` inspired by [flakelight](https://github.com/nix-community/flakelight)'s autoloading feature.
 
 ## License
 
