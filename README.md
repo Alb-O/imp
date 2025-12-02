@@ -1,6 +1,6 @@
 # imp 😈
 
-Recursively import Nix files from directories as NixOS modules or nested attrsets.
+A Nix library to recursively import Nix files from directories as NixOS modules or nested attrsets.
 
 ## Usage
 
@@ -123,7 +123,7 @@ imp.match ".*/[a-z]+@(foo|bar)\.nix" ./nix
 
 #### `.initFilter <predicate>`
 
-Replace the default filter. By default, imp finds `.nix` files and excludes paths containing `/_`.
+Replace the default filter. By default, `imp` finds `.nix` files and excludes paths containing `/_`.
 
 ```nix
 # Import markdown files instead
@@ -237,7 +237,7 @@ imp
 
 #### `.addAPI <attrset>`
 
-Extend imp with custom methods. Methods receive `self` for chaining.
+Extend `imp` with custom methods. Methods receive `self` for chaining.
 
 ```nix
 let
@@ -251,7 +251,7 @@ myImporter.services ./nix
 
 #### `.new`
 
-Returns a fresh imp with empty state, preserving custom API.
+Returns a fresh `imp` with empty state, preserving custom API.
 
 ## Examples
 
