@@ -171,6 +171,27 @@ Convenience function combining `.withLib`, `.mapTree`, and `.tree`.
 imp.treeWith lib (f: f args) ./outputs
 ```
 
+#### `.flakeOutputs { systems, pkgsFor, args } <path>`
+
+Build flake outputs with automatic per-system detection. Requires `.withLib`.
+
+Files accepting `pkgs` or `system` in their function arguments are automatically
+wrapped with `lib.genAttrs systems`. Other files are called directly with `args`.
+
+```nix
+(imp.withLib lib).flakeOutputs {
+  systems = [ "x86_64-linux" "aarch64-linux" ];
+  pkgsFor = system: nixpkgs.legacyPackages.${system};
+  args = { inherit self lib inputs; };
+} ./outputs
+```
+
+Parameters:
+
+- `systems`: List of systems to generate (e.g., `flake-utils.lib.defaultSystems`)
+- `pkgsFor`: Function `system -> pkgs` to get nixpkgs for each system
+- `args`: Base arguments passed to all files (per-system files also get `pkgs` and `system`)
+
 Real-world example - loading per-system flake outputs:
 
 ```nix
@@ -327,7 +348,9 @@ nixos/
 { imports = [ (imp ./nixos/modules) ]; }
 ```
 
-### Flake with Per-System Outputs
+### Flake with Per-System Outputs (Manual)
+
+Using `treeWith` with `flake-utils.lib.eachDefaultSystem`:
 
 ```
 outputs/
@@ -360,6 +383,47 @@ outputs/
 { pkgs, ... }:
 pkgs.stdenv.mkDerivation { name = "foo"; /* ... */ }
 ```
+
+### Flake with Automatic Per-System Detection
+
+Using `flakeOutputs` for automatic per-system wrapping based on function arguments:
+
+```nix
+# flake.nix
+{
+  outputs = { self, nixpkgs, imp, flake-utils, ... }:
+    let lib = nixpkgs.lib; in
+    (imp.withLib lib).flakeOutputs {
+      systems = flake-utils.lib.defaultSystems;
+      pkgsFor = system: nixpkgs.legacyPackages.${system};
+      args = { inherit self lib; };  # passed to all files
+    } ./outputs;
+}
+```
+
+Files that accept `pkgs` or `system` in their arguments are automatically wrapped per-system.
+Files without these arguments are called once with just the base `args`:
+
+```nix
+# outputs/packages.nix - has `pkgs`, auto-wrapped per-system
+{ pkgs, ... }: {
+  hello = pkgs.hello;
+}
+# Result: packages.x86_64-linux.hello, packages.aarch64-linux.hello, ...
+
+# outputs/devShells.nix - has `pkgs`, auto-wrapped per-system
+{ pkgs, ... }: {
+  default = pkgs.mkShell { packages = [ pkgs.git ]; };
+}
+
+# outputs/nixosConfigurations/server.nix - no pkgs/system, NOT wrapped
+{ lib, ... }:
+lib.nixosSystem { system = "x86_64-linux"; modules = [ ... ]; }
+# Result: nixosConfigurations.server (direct value, not per-system)
+```
+
+This eliminates boilerplate while keeping the convention explicit: per-system outputs
+declare `pkgs` or `system`, system-independent outputs don't.
 
 ### Conditional Module Loading
 

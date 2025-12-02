@@ -1,9 +1,8 @@
-# Builds a nested attrset from directory structure (Flakelight-style autoload)
+# Builds nested attrset from directory structure.
 #
-# Naming conventions:
-#   foo.nix or foo/default.nix -> { foo = <imported>; }
-#   foo_.nix -> { foo = <imported>; }  (trailing _ escapes reserved names e.g. `default`)
-#   _foo.nix or _foo/ -> ignored
+# Naming:  foo.nix | foo/default.nix -> { foo = ... }
+#          foo_.nix                  -> { foo = ... }  (escapes reserved names)
+#          _foo.nix | _foo/          -> ignored
 {
   lib,
   treef ? import,

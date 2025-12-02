@@ -1,18 +1,10 @@
-# Builds a NixOS/Home Manager module from directory structure
+# Builds a NixOS/Home Manager module where directory structure = option paths.
 #
-# Each file is a function receiving module args ({ config, lib, pkgs, ... })
-# and returning an attrset. The file's path becomes the option path:
+# Each file receives module args ({ config, lib, pkgs, ... }) plus extraArgs,
+# and returns config values. The path becomes the option path:
 #
-#   programs/git.nix     -> { programs.git = <result of calling file>; }
-#   services/nginx.nix   -> { services.nginx = <result>; }
-#   services/ssh/default.nix -> { services.ssh = <result>; }
-#
-# Usage:
-#   imports = [ (imp.configTree ./home) ];
-#
-# Or with extra args:
-#   imports = [ (imp.configTreeWith { inherit inputs; } ./home) ];
-#
+#   programs/git.nix          -> { programs.git = <result>; }
+#   services/nginx/default.nix -> { services.nginx = <result>; }
 {
   lib,
   filterf,

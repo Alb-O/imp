@@ -1,15 +1,14 @@
-# Builds flake outputs from directory structure with automatic per-system handling
+# Builds flake outputs from directory structure with automatic per-system handling.
 #
-# Files that accept `pkgs` or `system` in their arguments are automatically
-# wrapped with lib.genAttrs for all specified systems.
+# Detection: files accepting `pkgs` or `system` are wrapped with lib.genAttrs,
+# other files are called directly with base args.
 #
-# Example:
-#   # outputs/packages.nix - receives pkgs, auto-wrapped per-system
-#   { pkgs, ... }: { hello = pkgs.hello; }
-#
-#   # outputs/nixosConfigurations/foo.nix - no pkgs/system, called directly
-#   { lib, ... }: lib.nixosSystem { ... }
-#
+# Example structure:
+#   outputs/
+#     packages.nix      -> { pkgs, ... }: { hello = pkgs.hello; }  (per-system)
+#     devShells.nix     -> { pkgs, ... }: { default = ...; }       (per-system)
+#     nixosConfigurations/
+#       server.nix      -> { lib, ... }: lib.nixosSystem { ... }   (direct)
 {
   lib,
   systems,
@@ -19,7 +18,6 @@
   filterf ? _: true,
 }:
 let
-  # Check if a function wants per-system handling
   wantsPerSystem =
     f:
     let
@@ -27,7 +25,6 @@ let
     in
     fArgs ? pkgs || fArgs ? system;
 
-  # Wrap a function for per-system evaluation
   wrapPerSystem =
     f:
     lib.genAttrs systems (
@@ -41,7 +38,6 @@ let
       )
     );
 
-  # Process an imported file - detect and wrap if needed
   processImport =
     imported:
     let
@@ -50,7 +46,6 @@ let
     in
     if needsPerSystem then wrapPerSystem f else f args;
 
-  # Build tree with our processing
   buildTree = import ./tree.nix {
     inherit lib filterf;
     treef = path: processImport (treef path);
