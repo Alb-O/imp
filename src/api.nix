@@ -1,0 +1,245 @@
+/*
+  API method definitions for imp.
+
+  This module defines all chainable methods available on the imp object.
+  Methods are organized into categories:
+
+  - Filtering: filter, filterNot, match, matchNot, initFilter
+  - Transforming: map, mapTree
+  - Tree building: tree, treeWith, flakeOutputs, configTree, configTreeWith
+  - File lists: leafs, files, pipeTo
+  - Extending: addPath, addAPI, withLib, new
+*/
+let
+  utils = import ./lib.nix;
+  inherit (utils)
+    compose
+    and
+    andNot
+    matchesRegex
+    mapAttr
+    ;
+in
+
+/*
+  Builds the API methods for a given state.
+
+  Arguments:
+  - config: the state functor
+  - update: the current update function
+  - updated: the updated config state
+  - current: the current imp instance
+  - callable: reference to create fresh instances
+*/
+{
+  config,
+  update,
+  updated,
+  current,
+  callable,
+}:
+let
+  # Accumulates values into a config attribute
+  accAttr = attrName: acc: config (c: mapAttr (update c) attrName acc);
+
+  # Merges attributes into config
+  mergeAttrs = attrs: config (c: (update c) // attrs);
+in
+{
+  /*
+    .filter <predicate> / .filterNot <predicate>
+    Filter paths by predicate. Multiple filters compose with AND.
+
+      imp.filter (lib.hasInfix "/services/") ./modules
+      imp.filterNot (lib.hasInfix "/deprecated/") ./modules
+  */
+  filter = filterf: accAttr "filterf" (and filterf);
+  filterNot = filterf: accAttr "filterf" (andNot filterf);
+
+  /*
+    .match <regex> / .matchNot <regex>
+    Filter paths by regex (uses builtins.match).
+
+      imp.match ".+services.+" ./nix
+  */
+  match = regex: accAttr "filterf" (and (matchesRegex regex));
+  matchNot = regex: accAttr "filterf" (andNot (matchesRegex regex));
+
+  /*
+    .initFilter <predicate>
+    Replace the default filter. By default, imp finds .nix files
+    and excludes paths containing /_.
+
+      # Import markdown files instead
+      imp.initFilter (lib.hasSuffix ".md") ./docs
+  */
+  initFilter = initf: mergeAttrs { inherit initf; };
+
+  /*
+    .map <function>
+    Transform each matched path.
+
+      imp.map import ./packages
+      # Returns list of imported values instead of paths
+  */
+  map = mapf: accAttr "mapf" (compose mapf);
+
+  /*
+    .mapTree <function>
+    Transform values when using `.tree`. Composes with multiple calls.
+
+      (imp.withLib lib)
+        .mapTree (drv: drv // { meta.priority = 5; })
+        .tree ./packages
+  */
+  mapTree = treef: accAttr "treef" (compose treef);
+
+  /*
+    .withLib <lib>
+    Required before using .leafs, .files, .tree, or .treeWith.
+
+      imp.withLib nixpkgs.lib
+  */
+  withLib = lib: mergeAttrs { inherit lib; };
+
+  /*
+    .addPath <path>
+    Add additional paths to search.
+
+      imp
+        |> (i: i.addPath ./modules)
+        |> (i: i.addPath ./vendor)
+        |> (i: i.leafs)
+  */
+  addPath = path: accAttr "paths" (p: p ++ [ path ]);
+
+  /*
+    .addAPI <attrset>
+    Extend `imp` with custom methods. Methods receive `self` for chaining.
+
+      let
+        myImporter = imp.addAPI {
+          services = self: self.filter (lib.hasInfix "/services/");
+          packages = self: self.filter (lib.hasInfix "/packages/");
+        };
+      in
+      myImporter.services ./nix
+  */
+  addAPI = api: accAttr "api" (a: a // api);
+
+  /*
+    .pipeTo <function>
+    Apply a function to the file list.
+
+      (imp.withLib lib).pipeTo builtins.length ./modules
+      # Returns: 42
+  */
+  pipeTo = pipef: mergeAttrs { inherit pipef; };
+
+  /*
+    .leafs <path> / .files
+    Get the list of matched files. Requires .withLib.
+
+      (imp.withLib lib).leafs ./modules
+      # Returns: [ ./modules/foo.nix ./modules/bar.nix ... ]
+  */
+  leafs = mergeAttrs { pipef = (i: i); };
+
+  # Terminal operations
+  result = current [ ];
+  files = current.leafs.result;
+
+  /*
+    .tree <path>
+    Build a nested attrset from directory structure. Requires .withLib.
+
+      (imp.withLib lib).tree ./outputs
+  */
+  tree =
+    path:
+    if updated.lib == null then
+      throw "You need to call withLib before using tree."
+    else
+      import ./tree.nix {
+        inherit (updated) lib treef filterf;
+      } path;
+
+  /*
+    .treeWith <lib> <transform> <path>
+    Convenience function combining .withLib, .mapTree, and .tree.
+
+      # These are equivalent:
+      ((imp.withLib lib).mapTree (f: f args)).tree ./outputs
+      imp.treeWith lib (f: f args) ./outputs
+  */
+  treeWith =
+    lib: f: path:
+    ((current.withLib lib).mapTree f).tree path;
+
+  /*
+    .flakeOutputs { systems, pkgsFor, args } <path>
+    Build flake outputs with automatic per-system detection.
+    Files accepting `pkgs` or `system` are wrapped with lib.genAttrs.
+
+      (imp.withLib lib).flakeOutputs {
+        systems = [ "x86_64-linux" "aarch64-linux" ];
+        pkgsFor = system: nixpkgs.legacyPackages.''${system};
+        args = { inherit self lib; };
+      } ./outputs
+  */
+  flakeOutputs =
+    {
+      systems,
+      pkgsFor,
+      args ? { },
+    }:
+    path:
+    if updated.lib == null then
+      throw "You need to call withLib before using flakeOutputs."
+    else
+      import ./flakeOutputs.nix {
+        inherit (updated) lib treef filterf;
+        inherit systems pkgsFor args;
+      } path;
+
+  /*
+    .configTree <path>
+    Build a module where directory structure maps to option paths.
+    Each file receives module args and returns config values.
+
+      { inputs, ... }:
+      {
+        imports = [ ((inputs.imp.withLib lib).configTree ./home) ];
+      }
+  */
+  configTree =
+    path:
+    if updated.lib == null then
+      throw "You need to call withLib before using configTree."
+    else
+      import ./configTree.nix {
+        inherit (updated) lib filterf;
+      } path;
+
+  /*
+    .configTreeWith <extraArgs> <path>
+    Like .configTree but passes extra arguments to each file.
+
+      ((inputs.imp.withLib lib).configTreeWith { myArg = "value"; } ./home)
+  */
+  configTreeWith =
+    extraArgs: path:
+    if updated.lib == null then
+      throw "You need to call withLib before using configTreeWith."
+    else
+      import ./configTree.nix {
+        inherit (updated) lib filterf;
+        inherit extraArgs;
+      } path;
+
+  /*
+    .new
+    Returns a fresh imp with empty state, preserving custom API.
+  */
+  new = callable;
+}
