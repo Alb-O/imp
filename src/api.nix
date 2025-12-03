@@ -212,6 +212,49 @@ in
       } path;
 
   /*
+    .mergeConfigTrees [<options>] <paths>
+    Merge multiple config trees into a single module.
+
+    Can be called two ways:
+      imp.mergeConfigTrees [ path1 path2 ]           # uses defaults
+      imp.mergeConfigTrees { strategy = "merge"; } [ path1 path2 ]
+
+    Options:
+      - strategy: "override" (default) or "merge"
+        - "override": later trees completely override earlier (recursiveUpdate)
+        - "merge": use mkMerge for module system semantics (lists concat, etc.)
+      - extraArgs: additional arguments passed to each config file
+
+    Examples:
+
+      # Default: later overrides earlier
+      imp.mergeConfigTrees [ ../shell ./. ]
+
+      # With mkMerge: lists concatenate, attrs merge
+      imp.mergeConfigTrees { strategy = "merge"; } [ ../shell ./. ]
+
+      # With extra args
+      imp.mergeConfigTrees { extraArgs = { foo = "bar"; }; } [ ../shell ./. ]
+  */
+  mergeConfigTrees =
+    arg:
+    if updated.lib == null then
+      throw "You need to call withLib before using mergeConfigTrees."
+    else if builtins.isList arg then
+      # Called as: mergeConfigTrees [ paths ]
+      import ./mergeConfigTrees.nix {
+        inherit (updated) lib filterf;
+      } arg
+    else
+      # Called as: mergeConfigTrees { options } [ paths ]
+      paths:
+      import ./mergeConfigTrees.nix {
+        inherit (updated) lib filterf;
+        strategy = arg.strategy or "override";
+        extraArgs = arg.extraArgs or { };
+      } paths;
+
+  /*
     .new
     Returns a fresh imp with empty state, preserving custom API.
   */

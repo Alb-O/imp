@@ -92,17 +92,18 @@ Click to expand overview sections below:
 <details>
   <summary>File references</summary>
 
-| File                                               | Purpose                                         |
-| -------------------------------------------------- | ----------------------------------------------- |
-| [`src/api.nix`](src/api.nix)                       | All chainable methods (filter, map, tree, etc.) |
-| [`src/collect.nix`](src/collect.nix)               | File collection & filtering logic               |
-| [`src/tree.nix`](src/tree.nix)                     | Tree building from directories                  |
-| [`src/registry.nix`](src/registry.nix)             | Named module discovery and resolution           |
-| [`src/migrate.nix`](src/migrate.nix)               | Registry rename detection and migration         |
-| [`src/configTree.nix`](src/configTree.nix)         | NixOS/Home Manager config modules               |
-| [`src/flakeModule.nix`](src/flakeModule.nix)       | Flake-parts integration module                  |
-| [`src/lib.nix`](src/lib.nix)                       | Internal utilities                              |
-| [`src/collect-inputs.nix`](src/collect-inputs.nix) | Collect `__inputs` declarations from files      |
+| File                                                   | Purpose                                         |
+| ------------------------------------------------------ | ----------------------------------------------- |
+| [`src/api.nix`](src/api.nix)                           | All chainable methods (filter, map, tree, etc.) |
+| [`src/collect.nix`](src/collect.nix)                   | File collection & filtering logic               |
+| [`src/tree.nix`](src/tree.nix)                         | Tree building from directories                  |
+| [`src/registry.nix`](src/registry.nix)                 | Named module discovery and resolution           |
+| [`src/migrate.nix`](src/migrate.nix)                   | Registry rename detection and migration         |
+| [`src/configTree.nix`](src/configTree.nix)             | NixOS/Home Manager config modules               |
+| [`src/mergeConfigTrees.nix`](src/mergeConfigTrees.nix) | Merge multiple config trees                     |
+| [`src/flakeModule.nix`](src/flakeModule.nix)           | Flake-parts integration module                  |
+| [`src/lib.nix`](src/lib.nix)                           | Internal utilities                              |
+| [`src/collect-inputs.nix`](src/collect-inputs.nix)     | Collect `__inputs` declarations from files      |
 
 </details >
 
@@ -119,6 +120,7 @@ Click to expand overview sections below:
 | `.tree <path>`                | Build nested attrset from directory  |
 | `.treeWith <lib> <fn> <path>` | Tree with transform                  |
 | `.configTree <path>`          | Directory structure → option paths   |
+| `.mergeConfigTrees <paths>`   | Merge multiple config trees          |
 | `.leafs <path>`               | Get list of matched files            |
 | `.addAPI <attrset>`           | Extend with custom methods           |
 | `.collectInputs <path>`       | Collect `__inputs` from directory    |
@@ -162,6 +164,83 @@ home/
 {
   imports = [ ((inputs.imp.withLib lib).configTree ./home) ];
 }
+```
+
+### Merge Config Trees (Composable Features)
+
+Combine multiple config trees into one, with control over how values merge:
+
+```
+features/
+  shell/
+    programs/
+      zsh.nix        # enable=true, shellAliases={...}
+      starship.nix
+  devTools/
+    programs/
+      git.nix
+      neovim.nix
+  devShell/
+    default.nix      # Merges shell + devTools + local additions
+    programs/
+      zsh.nix        # Additional aliases, initContent
+```
+
+```nix
+# features/devShell/default.nix
+{ imp, registry, ... }:
+{
+  imports = [
+    (imp.mergeConfigTrees { strategy = "merge"; } [
+      registry.modules.home.features.shell     # base shell config
+      registry.modules.home.features.devTools  # dev tools
+      ./.                                       # local additions/overrides
+    ])
+  ];
+}
+```
+
+**Merge strategies:**
+
+| Strategy     | Behavior                                         | Use case                              |
+| ------------ | ------------------------------------------------ | ------------------------------------- |
+| `"override"` | Later values replace earlier (`recursiveUpdate`) | Override specific settings            |
+| `"merge"`    | Module system semantics (`mkMerge`)              | Concatenate lists, merge attrs deeply |
+
+With `"override"` (default), if both `shell` and `devShell` define `programs.zsh.initContent`, the later one wins completely.
+
+With `"merge"`, `initContent` values are concatenated (since it's a `types.lines` option). Use `lib.mkBefore`/`lib.mkAfter` to control ordering:
+
+```nix
+# features/devShell/programs/zsh.nix
+{ lib, ... }:
+{
+  shellAliases = {
+    nb = "nix build";
+    nd = "nix develop";
+  };
+
+  # Appended after shell's initContent
+  initContent = lib.mkAfter ''
+    export EDITOR="nvim"
+  '';
+}
+```
+
+**Simple usage (no options):**
+
+```nix
+# Default: override strategy
+imp.mergeConfigTrees [ ../base ./. ]
+```
+
+**With options:**
+
+```nix
+imp.mergeConfigTrees {
+  strategy = "merge";           # or "override"
+  extraArgs = { foo = "bar"; }; # passed to all config files
+} [ ../base ./. ]
 ```
 
 ### Conditional Loading

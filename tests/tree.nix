@@ -252,4 +252,242 @@ in
       };
     };
   };
+
+  # mergeConfigTrees tests - merge multiple trees with later overriding earlier
+  mergeConfigTrees."test fails if no lib has been set" = {
+    expr = it.mergeConfigTrees [ ./fixtures/mixed-tree/base ];
+    expectedError.type = "EvalError";
+  };
+
+  mergeConfigTrees."test merges multiple trees" = {
+    expr =
+      let
+        module = lit.mergeConfigTrees [
+          ./fixtures/mixed-tree/base
+          ./fixtures/mixed-tree/extended
+        ];
+        mockArgs = {
+          config = { };
+          lib = lib;
+          pkgs = { };
+        };
+        result = module mockArgs;
+      in
+      result.config;
+    expected = {
+      programs = {
+        # From base only
+        starship = {
+          enable = true;
+        };
+        # From extended only
+        git = {
+          enable = true;
+          userName = "Alice";
+        };
+        # Merged: base + extended overrides
+        zsh = {
+          enable = true; # from base
+          autocd = false; # from extended (overrides base's true)
+          dotDir = ".config/zsh"; # from extended (new)
+        };
+        # Merged: bash from both
+        bash = {
+          shellAliases = {
+            ll = "ls -l";
+            la = "ls -la";
+            g = "git";
+            ga = "git add";
+          };
+          initExtra = "# Dev shell init\nexport VISUAL=nvim\n"; # extended overrides
+        };
+      };
+    };
+  };
+
+  mergeConfigTrees."test single tree works like configTree" = {
+    expr =
+      let
+        module = lit.mergeConfigTrees [ ./fixtures/mixed-tree/base ];
+        mockArgs = {
+          config = { };
+          lib = lib;
+          pkgs = { };
+        };
+        result = module mockArgs;
+      in
+      result.config;
+    expected = {
+      programs = {
+        starship = {
+          enable = true;
+        };
+        zsh = {
+          enable = true;
+          autocd = true;
+        };
+        bash = {
+          shellAliases = {
+            ll = "ls -l";
+            la = "ls -la";
+          };
+          initExtra = "# Base shell init\nexport EDITOR=vim\n";
+        };
+      };
+    };
+  };
+
+  mergeConfigTrees."test order matters - later overrides earlier" = {
+    expr =
+      let
+        # Reverse order - base should override extended
+        module = lit.mergeConfigTrees [
+          ./fixtures/mixed-tree/extended
+          ./fixtures/mixed-tree/base
+        ];
+        mockArgs = {
+          config = { };
+          lib = lib;
+          pkgs = { };
+        };
+        result = module mockArgs;
+      in
+      result.config.programs.zsh;
+    expected = {
+      enable = true;
+      autocd = true; # base wins now
+      dotDir = ".config/zsh"; # extended's addition preserved
+    };
+  };
+
+  mergeConfigTrees."test options syntax - strategy override" = {
+    expr =
+      let
+        module = lit.mergeConfigTrees { strategy = "override"; } [
+          ./fixtures/mixed-tree/base
+          ./fixtures/mixed-tree/extended
+        ];
+        mockArgs = {
+          config = { };
+          lib = lib;
+          pkgs = { };
+        };
+        result = module mockArgs;
+      in
+      result.config.programs.zsh;
+    expected = {
+      enable = true;
+      autocd = false;
+      dotDir = ".config/zsh";
+    };
+  };
+
+  # Test merge strategy with actual module evaluation
+  mergeConfigTrees."test merge strategy concatenates lines options" = {
+    expr =
+      let
+        testModule =
+          { lib, ... }:
+          {
+            options.shell = {
+              aliases = lib.mkOption {
+                type = lib.types.attrsOf lib.types.str;
+                default = { };
+              };
+              init = lib.mkOption {
+                type = lib.types.lines;
+                default = "";
+              };
+            };
+          };
+
+        mergeTree = lit.mergeConfigTrees { strategy = "merge"; } [
+          ./fixtures/merge-strategy/base
+          ./fixtures/merge-strategy/extended
+        ];
+
+        evaluated = lib.evalModules {
+          modules = [
+            testModule
+            mergeTree
+          ];
+        };
+      in
+      evaluated.config.shell;
+    expected = {
+      aliases = {
+        ll = "ls -l";
+        g = "git";
+      };
+      init = "# base init\n\n# extended init\n";
+    };
+  };
+
+  mergeConfigTrees."test override strategy replaces lines options" = {
+    expr =
+      let
+        testModule =
+          { lib, ... }:
+          {
+            options.shell = {
+              aliases = lib.mkOption {
+                type = lib.types.attrsOf lib.types.str;
+                default = { };
+              };
+              init = lib.mkOption {
+                type = lib.types.lines;
+                default = "";
+              };
+            };
+          };
+
+        overrideTree = lit.mergeConfigTrees { strategy = "override"; } [
+          ./fixtures/merge-strategy/base
+          ./fixtures/merge-strategy/extended
+        ];
+
+        evaluated = lib.evalModules {
+          modules = [
+            testModule
+            overrideTree
+          ];
+        };
+      in
+      evaluated.config.shell;
+    expected = {
+      aliases = {
+        ll = "ls -l";
+        g = "git";
+      };
+      init = "# extended init\n"; # base's init is replaced, not concatenated
+    };
+  };
+
+  mergeConfigTrees."test extraArgs option passes args to files" = {
+    expr =
+      let
+        module =
+          lit.mergeConfigTrees
+            {
+              extraArgs = {
+                customArg = "hello";
+              };
+            }
+            [
+              ./fixtures/config-tree-extra
+            ];
+        mockArgs = {
+          config = { };
+          lib = lib;
+          pkgs = { };
+        };
+        result = module mockArgs;
+      in
+      result.config;
+    expected = {
+      test = {
+        fromCustomArg = "hello";
+      };
+    };
+  };
 }
