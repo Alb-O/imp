@@ -118,11 +118,12 @@ let
       echo "## Standalone Utilities"
       echo ""
       ${lib.getExe' nixdocBin "nixdoc"} \
-        --file "$SRC_DIR/standalone.nix" \
+        --file "$SRC_DIR/default.nix" \
         --category "" \
         --description "" \
         --prefix "imp" \
-        --anchor-prefix ""
+        --anchor-prefix "" \
+        --export collectInputs,collectAndFormatFlake
     } > "$SITE_DIR/src/reference/methods.md"
 
     # Generate options using nixdoc options command

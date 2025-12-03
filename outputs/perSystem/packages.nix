@@ -120,11 +120,12 @@ let
           echo "## Standalone Utilities"
           echo ""
           nixdoc \
-            --file ${srcDir}/standalone.nix \
+            --file ${srcDir}/default.nix \
             --category "" \
             --description "" \
             --prefix "imp" \
-            --anchor-prefix ""
+            --anchor-prefix "" \
+            --export collectInputs,collectAndFormatFlake
         } > $out/methods.md
 
         # Generate options reference using nixdoc options command

@@ -3,15 +3,67 @@ let
   perform = import ./collect.nix;
   inherit (utils) inModuleEval;
 
-  # Standalone utilities (no nixpkgs dependency)
+  /**
+    Scan directories for `__inputs` declarations and collect them.
+
+    Recursively scans .nix files for `__inputs` attribute declarations
+    and merges them into a single attrset. Detects conflicts when the
+    same input name has different definitions in different files.
+
+    # Example
+
+    ```nix
+    imp.collectInputs ./outputs
+    # => { treefmt-nix = { url = "github:numtide/treefmt-nix"; }; }
+    ```
+
+    # Arguments
+
+    path
+    : Directory or file path to scan for __inputs declarations.
+  */
   collectInputs = import ./collect-inputs.nix;
+
   flakeFormat = import ./format-flake.nix;
   inherit (flakeFormat) formatInputs formatFlake;
 
   # Registry utilities (requires lib)
   registryModule = import ./registry.nix;
 
-  # Convenience: collect inputs and format as flake.nix
+  /**
+    Convenience function combining collectInputs and formatFlake.
+
+    Scans a directory for `__inputs` declarations and generates
+    complete flake.nix content in one step.
+
+    # Example
+
+    ```nix
+    imp.collectAndFormatFlake {
+      src = ./outputs;
+      coreInputs = { nixpkgs.url = "github:nixos/nixpkgs"; };
+      description = "My flake";
+    }
+    # => "{ description = \"My flake\"; inputs = { ... }; ... }"
+    ```
+
+    # Arguments
+
+    src
+    : Directory to scan for __inputs declarations.
+
+    coreInputs
+    : Core flake inputs attrset (optional).
+
+    description
+    : Flake description string (optional).
+
+    outputsFile
+    : Path to outputs file (default: "./outputs.nix").
+
+    header
+    : Header comment for generated file (optional).
+  */
   collectAndFormatFlake =
     {
       src,
