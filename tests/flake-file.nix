@@ -164,8 +164,7 @@ in
           header = "";
         };
       in
-      (lib.hasInfix "${coreInputsHeader}" result)
-      && (lib.hasInfix "${collectedInputsHeader}" result);
+      (lib.hasInfix "${coreInputsHeader}" result) && (lib.hasInfix "${collectedInputsHeader}" result);
     expected = true;
   };
 

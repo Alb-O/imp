@@ -16,6 +16,7 @@ let
     isPathLike
     hasOutPath
     isimp
+    toPath
     ;
 in
 
@@ -36,19 +37,22 @@ in
 }:
 path:
 let
+  # Normalize registry nodes to their path
+  normalizedPath = toPath path;
+
   result =
     if pipef == null then
       { imports = [ module ]; }
     else if lib == null then
       throw "You need to call withLib before trying to read the tree."
     else
-      pipef (leafs lib path);
+      pipef (leafs lib normalizedPath);
 
   # Wraps file list in a module that delays lib access until NixOS evaluation
   module =
     { lib, ... }:
     {
-      imports = leafs lib path;
+      imports = leafs lib normalizedPath;
     };
 
   # Recursively collects and filters files from paths
@@ -61,14 +65,18 @@ let
       # Normalize various path-like inputs to file lists
       listFilesRecursive =
         x:
+        let
+          # Convert registry nodes to paths
+          p = toPath x;
+        in
         if isimp x then
           treeFiles x
-        else if hasOutPath x then
-          listFilesRecursive x.outPath
-        else if isDirectory x then
-          lib.filesystem.listFilesRecursive x
+        else if hasOutPath p then
+          listFilesRecursive p.outPath
+        else if isDirectory p then
+          lib.filesystem.listFilesRecursive p
         else
-          [ x ];
+          [ p ];
 
       # Default: .nix files, excluding paths with /_
       nixFilter = andNot (lib.hasInfix "/_") (lib.hasSuffix ".nix");
@@ -77,7 +85,7 @@ let
       # Compose user filters with initial filter
       pathFilter = compose (and filterf initialFilter) toString;
       otherFilter = and filterf (if initf != null then initf else (_: true));
-      filter = x: if isPathLike x then pathFilter x else otherFilter x;
+      filter = x: if isPathLike x then pathFilter (toPath x) else otherFilter x;
 
       # Convert absolute paths to relative for consistent filtering across roots
       isFileRelative =
@@ -97,6 +105,7 @@ let
         roots:
         lib.pipe roots [
           (lib.lists.flatten)
+          (builtins.map toPath)
           (builtins.filter isDirectory)
           (builtins.map builtins.toString)
           (builtins.map isFileRelative)
@@ -115,13 +124,14 @@ let
         let
           mkRel = makeRelative roots;
         in
-        x: if isPathLike x then mkRel x else x;
+        x: if isPathLike x then mkRel (toPath x) else x;
     in
     root:
     lib.pipe
       [ paths root ]
       [
         (lib.lists.flatten)
+        (map toPath)
         (map listFilesRecursive)
         (lib.lists.flatten)
         (builtins.filter (

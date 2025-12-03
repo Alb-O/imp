@@ -22,9 +22,15 @@ rec {
   # Type predicates
   hasOutPath = and (x: x ? outPath) builtins.isAttrs;
 
-  isPathLike = x: builtins.isPath x || builtins.isString x || hasOutPath x;
+  # Registry nodes have __path attribute
+  isRegistryNode = and (x: x ? __path) builtins.isAttrs;
 
-  isDirectory = and (x: builtins.readFileType x == "directory") isPathLike;
+  # Extract path from registry node or return as-is
+  toPath = x: if isRegistryNode x then x.__path else x;
+
+  isPathLike = x: builtins.isPath x || builtins.isString x || hasOutPath x || isRegistryNode x;
+
+  isDirectory = and (x: builtins.readFileType (toPath x) == "directory") isPathLike;
 
   isimp = and (x: x ? __config.__functor) builtins.isAttrs;
 

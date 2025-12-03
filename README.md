@@ -1,6 +1,8 @@
-# imp
+# Imp 😈
 
-A Nix library to recursively import Nix files from directories as NixOS modules or nested attrsets.
+A Nix library for organizing flakes with directory-based imports, named module registries, and automatic input collection.
+
+Primarily inspired by @vic's [Dendritic pattern (and related projects)](https://dendrix.oeiuwq.com/Dendritic.html).
 
 ## Installation
 
@@ -56,6 +58,10 @@ outputs/
   overlays.nix        -> flake.overlays
 ```
 
+Files in `perSystem/` receive: `{ pkgs, lib, system, self, self', inputs, inputs', registry, ... }`
+
+Files outside `perSystem/` receive: `{ lib, self, inputs, registry, ... }`
+
 ### As a Tree Builder
 
 ```nix
@@ -79,19 +85,29 @@ imp.treeWith lib import ./outputs
 
 ## API
 
-Full API documentation with examples is inline in the source:
+Full API documentation with examples is inline in the source code (`src/`).
+
+Click to expand overview sections below:
+
+<details>
+  <summary>File references</summary>
 
 | File                                               | Purpose                                         |
 | -------------------------------------------------- | ----------------------------------------------- |
 | [`src/api.nix`](src/api.nix)                       | All chainable methods (filter, map, tree, etc.) |
 | [`src/collect.nix`](src/collect.nix)               | File collection & filtering logic               |
 | [`src/tree.nix`](src/tree.nix)                     | Tree building from directories                  |
+| [`src/registry.nix`](src/registry.nix)             | Named module discovery and resolution           |
+| [`src/migrate.nix`](src/migrate.nix)               | Registry rename detection and migration         |
 | [`src/configTree.nix`](src/configTree.nix)         | NixOS/Home Manager config modules               |
 | [`src/flakeModule.nix`](src/flakeModule.nix)       | Flake-parts integration module                  |
 | [`src/lib.nix`](src/lib.nix)                       | Internal utilities                              |
 | [`src/collect-inputs.nix`](src/collect-inputs.nix) | Collect `__inputs` declarations from files      |
 
-### Overview
+</details >
+
+<details>
+  <summary>Methods</summary>
 
 | Method                        | Description                          |
 | ----------------------------- | ------------------------------------ |
@@ -106,21 +122,26 @@ Full API documentation with examples is inline in the source:
 | `.leafs <path>`               | Get list of matched files            |
 | `.addAPI <attrset>`           | Extend with custom methods           |
 | `.collectInputs <path>`       | Collect `__inputs` from directory    |
+| `.registry <path>`            | Build named module registry          |
 
-### flake-parts Module Options
+</details >
 
-| Option                    | Type   | Default        | Description                          |
-| ------------------------- | ------ | -------------- | ------------------------------------ |
-| `imp.src`                 | path   | null           | Directory containing outputs         |
-| `imp.args`                | attrs  | {}             | Extra args passed to all files       |
-| `imp.perSystemDir`        | string | "perSystem"    | Subdirectory name for per-system     |
-| `imp.flakeFile.enable`    | bool   | false          | Enable flake.nix generation          |
-| `imp.flakeFile.coreInputs`| attrs  | {}             | Core inputs always in flake.nix      |
-| `imp.flakeFile.outputsFile`| string| "./outputs.nix"| Path to outputs file from flake.nix  |
+<details>
+  <summary>Module options</summary>
 
-Files in `perSystem/` receive: `{ pkgs, lib, system, self, self', inputs, inputs', ... }`
+| Option                      | Type   | Default         | Description                         |
+| --------------------------- | ------ | --------------- | ----------------------------------- |
+| `imp.src`                   | path   | null            | Directory containing outputs        |
+| `imp.args`                  | attrs  | {}              | Extra args passed to all files      |
+| `imp.perSystemDir`          | string | "perSystem"     | Subdirectory name for per-system    |
+| `imp.registry.src`          | path   | null            | Root directory for module registry  |
+| `imp.registry.modules`      | attrs  | {}              | Explicit name->path overrides       |
+| `imp.registry.migratePaths` | list   | []              | Directories to scan for renames     |
+| `imp.flakeFile.enable`      | bool   | false           | Enable flake.nix generation         |
+| `imp.flakeFile.coreInputs`  | attrs  | {}              | Core inputs always in flake.nix     |
+| `imp.flakeFile.outputsFile` | string | "./outputs.nix" | Path to outputs file from flake.nix |
 
-Files outside `perSystem/` receive: `{ lib, self, inputs, ... }`
+</details >
 
 ## Examples
 
@@ -157,6 +178,93 @@ in
 }
 ```
 
+### Registry (Named Module Resolution)
+
+Reference modules by name instead of relative paths. The registry maps directory structure to named modules:
+
+```
+nix/
+  home/
+    alice/default.nix  -> registry.home.alice
+  modules/
+    nixos/             -> registry.modules.nixos (directory path)
+      base.nix         -> registry.modules.nixos.base
+    home/
+      base.nix         -> registry.modules.home.base
+  hosts/
+    server/default.nix -> registry.hosts.server
+```
+
+Enable the registry in flake-parts:
+
+```nix
+# nix/flake/default.nix
+inputs:
+let
+  impLib = inputs.imp.withLib nixpkgs.lib;
+  registry = impLib.registry ./..;  # Build registry from nix/ directory
+in
+flake-parts.lib.mkFlake { inherit inputs; } {
+  imports = [ inputs.imp.flakeModules.default ];
+
+  imp = {
+    src = ../outputs;
+    registry.src = ./..;  # Auto-inject registry into all files
+  };
+
+  flake.nixosModules.default = imp registry.modules.nixos;
+}
+```
+
+Use registry in output files:
+
+```nix
+# nix/outputs/nixosConfigurations/server.nix
+{ inputs, lib, imp, registry, ... }:
+lib.nixosSystem {
+  system = "x86_64-linux";
+  modules = [
+    (imp registry.hosts.server)
+    (imp registry.modules.nixos)
+  ];
+}
+```
+
+Directories without `default.nix` include a `__path` attribute for the directory itself, plus entries for children. This lets you use `imp registry.modules.nixos` to import the whole directory, or `registry.modules.nixos.base` for a specific file.
+
+### Registry Migration
+
+When directories are renamed, registry paths change. The `imp-registry` app detects broken references and generates fix commands:
+
+```sh
+# Detect renames and see suggestions
+nix run .#imp-registry -- --apply
+# `--apply` to run fixes instead of just showing the suggested sed command
+```
+
+Example output after renaming `home/` to `users/`:
+
+```
+Registry Migration
+==================
+
+Detected renames:
+  home.alice -> users.alice
+  home.bob -> users.bob
+
+Affected files:
+  /path/to/outputs/nixosConfigurations/server.nix
+
+Applying fixes...
+Done!
+```
+
+The tool:
+1. Scans files for `registry.X.Y` patterns
+2. Compares against current registry to find broken references
+3. Matches old paths to new paths by leaf name (e.g., `home.alice` → `users.alice`)
+4. Runs `sed` to update all affected files
+
 ### Collect Inputs
 
 Declare `__inputs` inline where they're used. The flake-parts module collects them automatically:
@@ -182,10 +290,10 @@ Declare `__inputs` inline where they're used. The flake-parts module collects th
     inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  __functor = _: { inputs, nixpkgs, imp, ... }:
+  __functor = _: { inputs, nixpkgs, imp, registry, ... }:
     inputs.home-manager.lib.homeManagerConfiguration {
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
-      modules = [ (imp ../../home/alice) ];
+      modules = [ (imp registry.home.alice) ];
     };
 }
 ```
@@ -217,7 +325,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
 }
 ```
 
-Then run `nix run .#gen-flake` to regenerate `flake.nix` with collected inputs.
+Then run `nix run .#imp-flake` to regenerate `flake.nix` with collected inputs.
 
 ## Development
 
@@ -231,6 +339,7 @@ nix fmt            # Format with treefmt
 
 - Import features originally written by @vic in [import-tree](https://github.com/vic/import-tree).
 - `.collectInputs` inspired by @vic's [flake-file](https://github.com/vic/flake-file).
+- `.registry` inspired by @vic's [flake-aspects](https://github.com/vic/flake-aspects).
 - `.tree` inspired by [flakelight](https://github.com/nix-community/flakelight)'s autoloading feature.
 
 ## License
