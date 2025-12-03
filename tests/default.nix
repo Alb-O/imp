@@ -10,3 +10,4 @@ in
 // (import ./flake-file.nix args)
 // (import ./registry.nix args)
 // (import ./migrate.nix args)
+// (import ./analyze.nix args)

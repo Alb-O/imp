@@ -259,4 +259,30 @@ in
     Returns a fresh imp with empty state, preserving custom API.
   */
   new = callable;
+
+  /*
+    .analyze
+    Namespace for dependency analysis and visualization functions.
+
+    Analyze a registry to discover module relationships:
+
+      graph = imp.analyze.registry { registry = myRegistry; }
+
+    Format the graph as DOT (Graphviz):
+
+      dotString = imp.analyze.toDot graph
+
+    Format as ASCII tree:
+
+      asciiString = imp.analyze.toAsciiTree graph
+
+    Get as JSON-serializable data:
+
+      jsonData = imp.analyze.toJson graph
+  */
+  analyze =
+    if updated.lib == null then
+      throw "You need to call withLib before using analyze."
+    else
+      import ./analyze.nix { inherit (updated) lib; };
 }

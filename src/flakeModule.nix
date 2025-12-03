@@ -356,6 +356,9 @@ in
             astGrep = "${pkgs.ast-grep}/bin/ast-grep";
             registryName = cfg.registry.name;
           };
+
+          analyzeLib = import ./analyze.nix { inherit lib; };
+          graph = analyzeLib.analyzeRegistry { inherit registry; };
         in
         {
           # Detect registry renames and generate fix commands.
@@ -371,6 +374,18 @@ in
             type = "app";
             program = toString (pkgs.writeShellScript "imp-registry" migration.script);
             meta.description = "Detect and fix registry path renames";
+          };
+
+          # Visualize registry dependencies as a graph.
+          #
+          # Analyzes the registry and outputs a dependency graph showing
+          # how modules reference each other via registry paths.
+          #
+          # Run: nix run .#imp-vis [--format=dot|ascii|json]
+          apps.imp-vis = {
+            type = "app";
+            program = toString (analyzeLib.mkVisualizeScript { inherit pkgs graph; });
+            meta.description = "Visualize registry dependencies";
           };
         };
     })
