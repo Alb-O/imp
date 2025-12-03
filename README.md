@@ -4,9 +4,8 @@ A Nix library for organizing flakes with directory-based imports, named module r
 
 Primarily inspired by @vic's [Dendritic pattern (and related projects)](https://dendrix.oeiuwq.com/Dendritic.html).
 
-## Installation
 
-Add `imp` as a flake input:
+## Installation
 
 ```nix
 {
@@ -17,7 +16,7 @@ Add `imp` as a flake input:
 
 ## Quick Start
 
-### As a Module Importer
+As a module importer:
 
 ```nix
 { inputs, ... }:
@@ -26,9 +25,7 @@ Add `imp` as a flake input:
 }
 ```
 
-### With flake-parts
-
-`imp` provides a flake-parts module that auto-loads outputs from a directory:
+With flake-parts:
 
 ```nix
 {
@@ -39,426 +36,23 @@ Add `imp` as a flake input:
       systems = [ "x86_64-linux" "aarch64-linux" ];
 
       imp = {
-        src = ./outputs;            # Directory to load
-        args = { inherit inputs; }; # Extra args for all files
+        src = ./outputs;
+        args = { inherit inputs; };
       };
     };
 }
 ```
 
-Directory structure:
-
-```
-outputs/
-  perSystem/
-    packages.nix      -> perSystem.packages (receives pkgs, system, etc.)
-    devShells.nix     -> perSystem.devShells
-  nixosConfigurations/
-    server.nix        -> flake.nixosConfigurations.server
-  overlays.nix        -> flake.overlays
-```
-
-Files in `perSystem/` receive: `{ pkgs, lib, system, self, self', inputs, inputs', registry, ... }`
-
-Files outside `perSystem/` receive: `{ lib, self, inputs, registry, ... }`
-
-### As a Tree Builder
+As a tree builder:
 
 ```nix
-# outputs/
-#   apps.nix
-#   packages/
-#     foo.nix
-
 imp.treeWith lib import ./outputs
 # { apps = <...>; packages = { foo = <...>; }; }
 ```
 
-## Naming Conventions
+## Documentation
 
-| Path              | Attribute | Notes                               |
-| ----------------- | --------- | ----------------------------------- |
-| `foo.nix`         | `foo`     | File as module                      |
-| `foo/default.nix` | `foo`     | Directory module                    |
-| `foo_.nix`        | `foo`     | Trailing `_` escapes reserved names |
-| `_foo.nix`        | (ignored) | Leading `_` = hidden                |
-
-## API
-
-Full API documentation with examples is inline in the source code (`src/`).
-
-Click to expand overview sections below:
-
-<details>
-  <summary>File references</summary>
-
-| File                                                   | Purpose                                         |
-| ------------------------------------------------------ | ----------------------------------------------- |
-| [`src/api.nix`](src/api.nix)                           | All chainable methods (filter, map, tree, etc.) |
-| [`src/collect.nix`](src/collect.nix)                   | File collection & filtering logic               |
-| [`src/tree.nix`](src/tree.nix)                         | Tree building from directories                  |
-| [`src/registry.nix`](src/registry.nix)                 | Named module discovery and resolution           |
-| [`src/migrate.nix`](src/migrate.nix)                   | Registry rename detection and migration         |
-| [`src/analyze.nix`](src/analyze.nix)                   | Registry dependency graph analysis              |
-| [`src/visualize.nix`](src/visualize.nix)               | Graph output formats (HTML, JSON)               |
-| [`src/configTree.nix`](src/configTree.nix)             | NixOS/Home Manager config modules               |
-| [`src/mergeConfigTrees.nix`](src/mergeConfigTrees.nix) | Merge multiple config trees                     |
-| [`src/flakeModule.nix`](src/flakeModule.nix)           | Flake-parts integration module                  |
-| [`src/lib.nix`](src/lib.nix)                           | Internal utilities                              |
-| [`src/collect-inputs.nix`](src/collect-inputs.nix)     | Collect `__inputs` declarations from files      |
-
-</details >
-
-<details>
-  <summary>Methods</summary>
-
-| Method                        | Description                          |
-| ----------------------------- | ------------------------------------ |
-| `imp <path>`                  | Import directory as NixOS module     |
-| `.withLib <lib>`              | Bind nixpkgs lib (required for most) |
-| `.imports <list>`             | Import paths, pass through modules   |
-| `.filter <pred>`              | Filter paths by predicate            |
-| `.match <regex>`              | Filter paths by regex                |
-| `.map <fn>`                   | Transform matched paths              |
-| `.tree <path>`                | Build nested attrset from directory  |
-| `.treeWith <lib> <fn> <path>` | Tree with transform                  |
-| `.configTree <path>`          | Directory structure → option paths   |
-| `.mergeConfigTrees <paths>`   | Merge multiple config trees          |
-| `.leafs <path>`               | Get list of matched files            |
-| `.addAPI <attrset>`           | Extend with custom methods           |
-| `.collectInputs <path>`       | Collect `__inputs` from directory    |
-| `.registry <path>`            | Build named module registry          |
-
-</details >
-
-<details>
-  <summary>Module options</summary>
-
-| Option                      | Type   | Default         | Description                         |
-| --------------------------- | ------ | --------------- | ----------------------------------- |
-| `imp.src`                   | path   | null            | Directory containing outputs        |
-| `imp.args`                  | attrs  | {}              | Extra args passed to all files      |
-| `imp.perSystemDir`          | string | "perSystem"     | Subdirectory name for per-system    |
-| `imp.registry.name`         | string | "registry"      | Attribute name for registry arg     |
-| `imp.registry.src`          | path   | null            | Root directory for module registry  |
-| `imp.registry.modules`      | attrs  | {}              | Explicit name->path overrides       |
-| `imp.registry.migratePaths` | list   | []              | Directories to scan for renames     |
-| `imp.flakeFile.enable`      | bool   | false           | Enable flake.nix generation         |
-| `imp.flakeFile.coreInputs`  | attrs  | {}              | Core inputs always in flake.nix     |
-| `imp.flakeFile.outputsFile` | string | "./outputs.nix" | Path to outputs file from flake.nix |
-
-</details >
-
-## Examples
-
-### Config Tree (Home Manager / NixOS)
-
-Directory structure becomes option paths:
-
-```
-home/
-  programs/
-    git.nix      -> programs.git = { ... }
-    zsh.nix      -> programs.zsh = { ... }
-```
-
-```nix
-{ inputs, ... }:
-{
-  imports = [ ((inputs.imp.withLib lib).configTree ./home) ];
-}
-```
-
-### Merge Config Trees (Composable Features)
-
-Combine multiple config trees into one, with control over how values merge:
-
-```
-features/
-  shell/
-    programs/
-      zsh.nix        # enable=true, shellAliases={...}
-      starship.nix
-  devTools/
-    programs/
-      git.nix
-      neovim.nix
-  devShell/
-    default.nix      # Merges shell + devTools + local additions
-    programs/
-      zsh.nix        # Additional aliases, initContent
-```
-
-```nix
-# features/devShell/default.nix
-{ imp, registry, ... }:
-{
-  imports = [
-    (imp.mergeConfigTrees { strategy = "merge"; } [
-      registry.modules.home.features.shell     # base shell config
-      registry.modules.home.features.devTools  # dev tools
-      ./.                                       # local additions/overrides
-    ])
-  ];
-}
-```
-
-**Merge strategies:**
-
-| Strategy     | Behavior                                         | Use case                              |
-| ------------ | ------------------------------------------------ | ------------------------------------- |
-| `"override"` | Later values replace earlier (`recursiveUpdate`) | Override specific settings            |
-| `"merge"`    | Module system semantics (`mkMerge`)              | Concatenate lists, merge attrs deeply |
-
-With `"override"` (default), if both `shell` and `devShell` define `programs.zsh.initContent`, the later one wins completely.
-
-With `"merge"`, `initContent` values are concatenated (since it's a `types.lines` option). Use `lib.mkBefore`/`lib.mkAfter` to control ordering:
-
-```nix
-# features/devShell/programs/zsh.nix
-{ lib, ... }:
-{
-  shellAliases = {
-    nb = "nix build";
-    nd = "nix develop";
-  };
-
-  # Appended after shell's initContent
-  initContent = lib.mkAfter ''
-    export EDITOR="nvim"
-  '';
-}
-```
-
-**Simple usage (no options):**
-
-```nix
-# Default: override strategy
-imp.mergeConfigTrees [ ../base ./. ]
-```
-
-**With options:**
-
-```nix
-imp.mergeConfigTrees {
-  strategy = "merge";           # or "override"
-  extraArgs = { foo = "bar"; }; # passed to all config files
-} [ ../base ./. ]
-```
-
-### Conditional Loading
-
-```nix
-let
-  imp = inputs.imp.withLib lib;
-in
-{
-  imports = [
-    (if isServer
-      then imp.filter (lib.hasInfix "/server/") ./modules
-      else imp.filter (lib.hasInfix "/desktop/") ./modules)
-  ];
-}
-```
-
-### Registry (Named Module Resolution)
-
-Reference modules by name instead of relative paths. The registry maps directory structure to named modules:
-
-```
-registry/
-  users/
-    alice/default.nix  -> registry.users.alice
-  modules/
-    nixos/             -> registry.modules.nixos (directory path)
-      base.nix         -> registry.modules.nixos.base
-    home/
-      base.nix         -> registry.modules.home.base
-  hosts/
-    server/default.nix -> registry.hosts.server
-```
-
-Enable the registry in flake-parts:
-
-```nix
-# nix/flake/default.nix
-inputs:
-flake-parts.lib.mkFlake { inherit inputs; } {
-  imports = [ inputs.imp.flakeModules.default ];
-
-  imp = {
-    src = ../outputs;
-    registry.src = ../registry;  # Auto-inject registry into all files
-  };
-}
-```
-
-Use registry in output files with `imp.imports`:
-
-```nix
-# nix/outputs/nixosConfigurations/server.nix
-{ lib, inputs, imp, registry, ... }:
-lib.nixosSystem {
-  system = "x86_64-linux";
-  specialArgs = { inherit inputs imp registry; };
-  modules = imp.imports [
-    registry.hosts.server
-    registry.modules.nixos.base
-    registry.modules.nixos.features.hardening
-    registry.modules.nixos.features.webserver
-  ];
-}
-```
-
-`imp.imports` handles mixed content - paths are imported, modules pass through:
-
-```nix
-modules = imp.imports [
-  registry.hosts.server                         # path -> imported
-  registry.modules.nixos.base                   # path -> imported
-  inputs.some-flake.nixosModules.something      # module -> passed through
-  { services.openssh.enable = true; }           # inline config -> passed through
-];
-```
-
-Directories without `default.nix` include a `__path` attribute for the directory itself, plus entries for children. This lets you use `imp registry.modules.nixos` to import the whole directory, or `registry.modules.nixos.base` for a specific file.
-
-### Registry Migration
-
-When directories are renamed, registry paths change. The `imp-registry` app detects broken references and generates fix commands:
-
-```sh
-# Detect renames and see suggestions
-nix run .#imp-registry
-
-# Apply fixes automatically
-nix run .#imp-registry -- --apply
-```
-
-Example output after renaming `home/` to `users/`:
-
-```
-Registry Migration
-==================
-
-Detected renames:
-  home.alice -> users.alice
-
-Affected files:
-  nix/outputs/nixosConfigurations/server.nix
-
-Commands to apply:
-  ast-grep --lang nix --pattern 'registry.home.alice' --rewrite 'registry.users.alice' nix/outputs/...
-
-Run with --apply to execute these commands.
-```
-
-The tool:
-
-1. Scans files for `registry.X.Y` patterns
-1. Compares against current registry to find broken references
-1. Matches old paths to new paths by leaf name (e.g., `home.alice` → `users.alice`)
-1. Uses [ast-grep](https://ast-grep.github.io/) for AST-aware replacements (handles multi-line expressions correctly)
-
-### Registry Visualization
-
-Visualize how modules reference each other through the registry. The `imp-vis` app generates an interactive HTML graph:
-
-```sh
-# Generate interactive HTML visualization
-nix run .#imp-vis > deps.html
-
-# Or output as JSON
-nix run .#imp-vis -- --format=json > deps.json
-```
-
-Open the HTML file in a browser to explore your module dependency graph:
-
-- **Nodes** represent registry entries (modules, hosts, users, etc.)
-- **Edges** show `registry.X.Y` references between modules
-- **Colors** indicate clusters (e.g., `modules.home`, `hosts`, `outputs`)
-- **Sink nodes** (final outputs like `nixosConfigurations`) are larger with permanent labels
-- **Animated dashed edges** show dependency direction
-- **Hover** to highlight connections; **drag** to reposition nodes (positions are fixed after drag)
-
-Nodes with identical edge topology are merged to reduce clutter (e.g., multiple features that all flow to the same outputs).
-
-The standalone `visualize` app works with any directory:
-
-```sh
-nix run .#visualize -- ./path/to/nix > deps.html
-```
-
-### Collect Inputs
-
-Declare `__inputs` inline where they're used. The flake-parts module collects them automatically:
-
-```nix
-# nix/outputs/perSystem/formatter.nix
-{
-  __inputs.treefmt-nix.url = "github:numtide/treefmt-nix";
-
-  __functor = _: { pkgs, inputs, ... }:
-    inputs.treefmt-nix.lib.evalModule pkgs {
-      projectRootFile = "flake.nix";
-      programs.nixfmt.enable = true;
-    };
-}
-```
-
-For inputs used across multiple files, add them to `coreInputs` instead:
-
-```nix
-# nix/flake/inputs.nix
-{
-  nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-  home-manager = {
-    url = "github:nix-community/home-manager";
-    inputs.nixpkgs.follows = "nixpkgs";
-  };
-}
-```
-
-Then output files can be simple functions:
-
-```nix
-# nix/outputs/homeConfigurations/alice@workstation.nix
-{ inputs, nixpkgs, imp, registry, ... }:
-inputs.home-manager.lib.homeManagerConfiguration {
-  pkgs = nixpkgs.legacyPackages.x86_64-linux;
-  extraSpecialArgs = { inherit inputs imp registry; };
-  modules = [ (import registry.users.alice) ];
-}
-```
-
-Enable flake generation to auto-collect inputs into `flake.nix`:
-
-```nix
-# nix/flake/default.nix
-inputs:
-flake-parts.lib.mkFlake { inherit inputs; } {
-  imports = [ inputs.imp.flakeModules.default ];
-
-  imp = {
-    src = ../outputs;
-    flakeFile = {
-      enable = true;
-      coreInputs = import ./inputs.nix;
-      outputsFile = "./nix/flake";
-    };
-  };
-}
-```
-
-```nix
-# flake.nix (auto-generated)
-{
-  inputs = { /* ... */ };
-  outputs = inputs: import ./nix/flake inputs;
-}
-```
-
-Then run `nix run .#imp-flake` to regenerate `flake.nix` with collected inputs.
+Full documentation, examples, and API reference, [click here](https://alb-o.github.io/imp).
 
 ## Development
 
@@ -466,14 +60,15 @@ Then run `nix run .#imp-flake` to regenerate `flake.nix` with collected inputs.
 nix run .#tests    # Run unit tests
 nix flake check    # Full check
 nix fmt            # Format with treefmt
+nix run .#docs     # Serve documentation locally
 ```
 
 ## Attribution
 
-- Import features originally written by @vic in [import-tree](https://github.com/vic/import-tree).
-- `.collectInputs` inspired by @vic's [flake-file](https://github.com/vic/flake-file).
-- `.registry` inspired by @vic's [flake-aspects](https://github.com/vic/flake-aspects).
-- `.tree` inspired by [flakelight](https://github.com/nix-community/flakelight)'s autoloading feature.
+- Import features originally from @vic's [import-tree](https://github.com/vic/import-tree)
+- `.collectInputs` inspired by @vic's [flake-file](https://github.com/vic/flake-file)
+- `.registry` inspired by @vic's [flake-aspects](https://github.com/vic/flake-aspects)
+- `.tree` inspired by [flakelight](https://github.com/nix-community/flakelight)'s autoloading
 
 ## License
 

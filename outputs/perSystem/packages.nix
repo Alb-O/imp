@@ -7,6 +7,7 @@
 let
   siteDir = ../../site;
   srcDir = ../../src;
+  readmeFile = ../../README.md;
 
   # mdformat with plugins (same as formatter.nix)
   mdformat = pkgs.mdformat.withPlugins (
@@ -111,6 +112,7 @@ let
     cp -r ${siteDir} $out
     chmod -R +w $out
     cp ${apiReference}/methods.md $out/src/reference/methods.md
+    cp ${readmeFile} $out/src/README.md
   '';
 in
 {

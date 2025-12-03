@@ -1,0 +1,2 @@
+# Allows OpenCode ripgrep to search in tmp
+!tmp/

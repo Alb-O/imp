@@ -1,2 +1,2 @@
 - Remember to `git add` untracked files before doing nix evals.
-- If developing a working version of a library or dependency, and needing to test changes from the consuming flake, use the `--override-input` arg in nix evals, e.g. `--override-input imp path:./tmp/imp`. Do not change the input url/path directly in the consumer.
+- If developing a working version of a library or dependency, and needing to test changes from the consuming flake, use the `--override-input` arg in nix evals, e.g. `--override-input nixdoc path:./tmp/nixdoc/`. Do not change the input url/path directly in the consumer.
