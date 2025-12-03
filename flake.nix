@@ -1,5 +1,6 @@
 {
-  description = "Recursively import Nix modules from a directory";
+  description = "A Nix library for organizing flakes with directory-based imports, named module registries, and automatic input collection.
+";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
