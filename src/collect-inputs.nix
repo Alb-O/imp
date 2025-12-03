@@ -1,10 +1,23 @@
-# Collects __inputs declarations from a directory tree.
-# Standalone implementation - no nixpkgs dependency, only builtins.
-#
-# Usage:
-#   collectInputs ./nix/outputs
-#   # Returns: { treefmt-nix = { url = "..."; }; home-manager = { ... }; }
+/**
+  Collects __inputs declarations from a directory tree.
+  Standalone implementation - no nixpkgs dependency, only builtins.
 
+  Scans .nix files recursively for `__inputs` attribute declarations and
+  merges them, detecting conflicts when the same input name has different
+  definitions in different files.
+
+  # Example
+
+  ```nix
+  collectInputs ./nix/outputs
+  # => { treefmt-nix = { url = "github:numtide/treefmt-nix"; }; }
+  ```
+
+  # Arguments
+
+  path
+  : Directory or file path to scan for __inputs declarations.
+*/
 let
   # Check if path should be excluded (starts with _ in basename)
   isExcluded =

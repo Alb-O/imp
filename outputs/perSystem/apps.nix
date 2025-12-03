@@ -65,7 +65,7 @@ let
     {
       echo "# API Methods"
       echo ""
-      echo "<!-- Auto-generated from src/api.nix - do not edit -->"
+      echo "<!-- Auto-generated from src/*.nix - do not edit -->"
       echo ""
       ${lib.getExe' nixdocBin "nixdoc"} \
         --file "$SRC_DIR/api.nix" \
@@ -114,8 +114,15 @@ let
         --prefix "imp" \
         --anchor-prefix ""
 
-      # Append standalone section from shared file
-      cat "$SITE_DIR/src/reference/standalone.md"
+      echo ""
+      echo "## Standalone Utilities"
+      echo ""
+      ${lib.getExe' nixdocBin "nixdoc"} \
+        --file "$SRC_DIR/standalone.nix" \
+        --category "" \
+        --description "" \
+        --prefix "imp" \
+        --anchor-prefix ""
     } > "$SITE_DIR/src/reference/methods.md"
 
     # Generate options using nixdoc options command

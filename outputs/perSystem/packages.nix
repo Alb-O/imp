@@ -49,9 +49,6 @@ let
   # Serialize to JSON
   optionsJson = builtins.toJSON optionsNix;
 
-  # Standalone utilities section - imported from shared location
-  standaloneSection = builtins.readFile ../../site/src/reference/standalone.md;
-
   # Generate API reference from source using nixdoc
   apiReference =
     pkgs.runCommand "imp-api-reference"
@@ -61,17 +58,16 @@ let
           mdformat
         ];
         passAsFile = [
-          "standaloneSection"
           "optionsJson"
         ];
-        inherit standaloneSection optionsJson;
+        inherit optionsJson;
       }
       ''
         mkdir -p $out
         {
           echo "# API Methods"
           echo ""
-          echo "<!-- Auto-generated from src/api.nix - do not edit -->"
+          echo "<!-- Auto-generated from src/*.nix - do not edit -->"
           echo ""
           nixdoc \
             --file ${srcDir}/api.nix \
@@ -120,7 +116,15 @@ let
             --prefix "imp" \
             --anchor-prefix ""
 
-          cat $standaloneSectionPath
+          echo ""
+          echo "## Standalone Utilities"
+          echo ""
+          nixdoc \
+            --file ${srcDir}/standalone.nix \
+            --category "" \
+            --description "" \
+            --prefix "imp" \
+            --anchor-prefix ""
         } > $out/methods.md
 
         # Generate options reference using nixdoc options command
