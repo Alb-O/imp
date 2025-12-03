@@ -1,4 +1,4 @@
-# Imp
+# Imp 😈
 
 A Nix library for organizing flakes with directory-based imports, named module registries, and automatic input collection.
 

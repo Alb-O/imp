@@ -59,7 +59,11 @@ in
     program = toString (
       pkgs.writeShellScript "serve-docs" ''
         tmpdir=$(mktemp -d)
-        trap "rm -rf $tmpdir" EXIT
+        cleanup() {
+          kill $pid 2>/dev/null
+          rm -rf "$tmpdir"
+        }
+        trap cleanup EXIT INT TERM
         cp -r ${siteDir}/* "$tmpdir/"
         chmod -R u+w "$tmpdir"
         ${pkgs.mdbook}/bin/mdbook serve "$tmpdir" &
