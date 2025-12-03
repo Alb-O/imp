@@ -1,45 +1,56 @@
-/*
+/**
   Registry: Named module discovery and resolution.
 
   Scans a directory tree and builds a nested attrset mapping names to paths.
   Files can then reference modules by name instead of relative paths.
 
+  # Example
+
   Directory structure:
-    nix/
+
+  ```
+  nix/
+    home/
+      alice/default.nix
+      bob.nix
+    modules/
+      nixos/
+        base.nix
       home/
-        alice/default.nix
-        bob.nix
-      modules/
-        nixos/
-          base.nix
-        home/
-          base.nix
+        base.nix
+  ```
 
   Produces registry:
-    {
-      home = {
-        __path = <nix/home>;  # directory itself
-        alice = <path>;
-        bob = <path>;
+
+  ```nix
+  {
+    home = {
+      __path = <nix/home>;  # directory itself
+      alice = <path>;
+      bob = <path>;
+    };
+    modules = {
+      __path = <nix/modules>;
+      nixos = {
+        __path = <nix/modules/nixos>;
+        base = <path>;
       };
-      modules = {
-        __path = <nix/modules>;
-        nixos = {
-          __path = <nix/modules/nixos>;
-          base = <path>;
-        };
-        home = { ... };
-      };
-    }
+      home = { ... };
+    };
+  }
+  ```
 
   Usage in files:
-    { registry, ... }:
-    {
-      # Use the directory path
-      imports = [ (imp registry.modules.nixos) ];
-      # Or a specific file
-      imports = [ registry.modules.home.base ];
-    }
+
+  ```nix
+  { registry, ... }:
+  {
+    # Use the directory path
+    imports = [ (imp registry.modules.nixos) ];
+    # Or a specific file
+    imports = [ registry.modules.home.base ];
+  }
+  ```
 
   Note: Directories are "path-like" (have __path) so they work with `imp`.
 */
@@ -48,9 +59,14 @@
   filterf ? _: true,
 }:
 let
-  /*
+  /**
     Build registry from a directory.
     Returns nested attrset where each directory has __path and child entries.
+
+    # Arguments
+
+    root
+    : Root directory path to scan.
   */
   buildRegistry =
     root:
@@ -97,18 +113,41 @@ let
     in
     lib.foldl' (acc: x: acc // x) { } processed;
 
-  # Check if a value is a registry node (has __path).
+  /**
+    Check if a value is a registry node (has __path).
+
+    # Arguments
+
+    x
+    : Value to check.
+  */
   isRegistryNode = x: lib.isAttrs x && x ? __path;
 
-  /*
+  /**
     Get the path from a registry value.
     Works for both direct paths and registry nodes with __path.
+
+    # Arguments
+
+    x
+    : Registry value (path or node with __path).
   */
   toPath = x: if isRegistryNode x then x.__path else x;
 
-  /*
+  /**
     Flatten registry to dot-notation paths.
-    { home.alice = <path>; modules.nixos = <path>; modules.nixos.base = <path>; }
+
+    # Example
+
+    ```nix
+    flattenRegistry registry
+    # => { home.alice = <path>; modules.nixos = <path>; modules.nixos.base = <path>; }
+    ```
+
+    # Arguments
+
+    registry
+    : Registry attrset to flatten.
   */
   flattenRegistry =
     registry:
@@ -134,9 +173,23 @@ let
     in
     flatten "" registry;
 
-  /*
+  /**
     Lookup a dotted path in the registry.
-    lookup "home.alice" registry -> <path>
+
+    # Example
+
+    ```nix
+    lookup "home.alice" registry
+    # => <path>
+    ```
+
+    # Arguments
+
+    path
+    : Dot-separated path string (e.g. "home.alice").
+
+    registry
+    : Registry attrset to search.
   */
   lookup =
     path: registry:
@@ -146,9 +199,22 @@ let
     in
     toPath result;
 
-  /*
+  /**
     Create a resolver function that looks up names in the registry.
     Returns a function: name -> path
+
+    # Example
+
+    ```nix
+    resolve = makeResolver registry;
+    resolve "home.alice"
+    # => <path>
+    ```
+
+    # Arguments
+
+    registry
+    : Registry attrset to create resolver for.
   */
   makeResolver =
     registry:

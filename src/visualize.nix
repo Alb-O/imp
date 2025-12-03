@@ -1,4 +1,4 @@
-/*
+/**
   Visualization output for imp dependency graphs.
 
   Provides functions to format analyzed graphs for output:
@@ -12,13 +12,27 @@ let
   # Read the JavaScript template
   jsTemplate = builtins.readFile ./visualize-html.js;
 
-  # Convert graph to a JSON-serializable structure.
+  /**
+    Convert graph to a JSON-serializable structure with full paths.
+
+    # Arguments
+
+    graph
+    : Graph with nodes and edges from analyze functions.
+  */
   toJson = graph: {
     nodes = map (n: n // { path = toString n.path; }) graph.nodes;
     edges = graph.edges;
   };
 
-  # Convert graph to JSON without paths (avoids store path issues with special chars).
+  /**
+    Convert graph to JSON without paths (avoids store path issues with special chars).
+
+    # Arguments
+
+    graph
+    : Graph with nodes and edges from analyze functions.
+  */
   toJsonMinimal = graph: {
     nodes = map (
       n: { inherit (n) id type; } // lib.optionalAttrs (n ? strategy) { inherit (n) strategy; }
@@ -26,8 +40,16 @@ let
     edges = graph.edges;
   };
 
-  # Generate interactive HTML visualization using force-graph library.
-  # Features: hover highlighting, cluster coloring, animated dashed directional edges, auto-fix on drag.
+  /**
+    Generate interactive HTML visualization using force-graph library.
+
+    Features: hover highlighting, cluster coloring, animated dashed directional edges, auto-fix on drag.
+
+    # Arguments
+
+    graph
+    : Graph with nodes and edges from analyze functions.
+  */
   toHtml =
     graph:
     let
@@ -191,7 +213,7 @@ let
         </html>
     '';
 
-  /*
+  /**
     Build a shell script that outputs the graph in the requested format.
 
     Can be called two ways:
@@ -202,14 +224,22 @@ let
     2. With impSrc and nixpkgsFlake (standalone - runtime eval of arbitrary path):
        mkVisualizeScript { pkgs, impSrc, nixpkgsFlake }
 
-    Arguments:
-      - pkgs: nixpkgs package set (for writeShellScript)
-      - graph: pre-analyzed graph (optional, for pre-computed mode)
-      - impSrc: path to imp source (optional, for standalone mode)
-      - nixpkgsFlake: nixpkgs flake reference string (optional, for standalone mode)
-      - name: script name (default: "imp-vis")
+    # Arguments
 
-    Returns: a derivation for the shell script
+    pkgs
+    : nixpkgs package set (for writeShellScript).
+
+    graph
+    : Pre-analyzed graph (optional, for pre-computed mode).
+
+    impSrc
+    : Path to imp source (optional, for standalone mode).
+
+    nixpkgsFlake
+    : Nixpkgs flake reference string (optional, for standalone mode).
+
+    name
+    : Script name (default: "imp-vis").
   */
   mkVisualizeScript =
     {

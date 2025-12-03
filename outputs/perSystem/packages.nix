@@ -2,12 +2,16 @@
   pkgs,
   lib,
   treefmt-nix,
+  nixdoc,
   ...
 }:
 let
   siteDir = ../../site;
   srcDir = ../../src;
   readmeFile = ../../README.md;
+
+  # Use forked nixdoc with let-in identifier resolution
+  nixdocBin = nixdoc.packages.${pkgs.system}.default;
 
   # mdformat with plugins (same as formatter.nix)
   mdformat = pkgs.mdformat.withPlugins (
@@ -81,7 +85,7 @@ let
     pkgs.runCommand "imp-api-reference"
       {
         nativeBuildInputs = [
-          pkgs.nixdoc
+          nixdocBin
           mdformat
         ];
         passAsFile = [ "standaloneSection" ];
@@ -100,6 +104,47 @@ let
             --description "" \
             --prefix "imp" \
             --anchor-prefix ""
+
+          echo ""
+          echo "## Registry"
+          echo ""
+          nixdoc \
+            --file ${srcDir}/registry.nix \
+            --category "" \
+            --description "" \
+            --prefix "imp" \
+            --anchor-prefix ""
+
+          echo ""
+          echo "## Format Flake"
+          echo ""
+          nixdoc \
+            --file ${srcDir}/format-flake.nix \
+            --category "" \
+            --description "" \
+            --prefix "imp" \
+            --anchor-prefix ""
+
+          echo ""
+          echo "## Analyze"
+          echo ""
+          nixdoc \
+            --file ${srcDir}/analyze.nix \
+            --category "" \
+            --description "" \
+            --prefix "imp" \
+            --anchor-prefix ""
+
+          echo ""
+          echo "## Visualize"
+          echo ""
+          nixdoc \
+            --file ${srcDir}/visualize.nix \
+            --category "" \
+            --description "" \
+            --prefix "imp" \
+            --anchor-prefix ""
+
           cat $standaloneSectionPath
         } > $out/methods.md
 

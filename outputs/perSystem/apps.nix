@@ -3,13 +3,16 @@
   system,
   nix-unit,
   nixpkgs,
+  nixdoc,
   self,
   lib,
   ...
 }:
 let
   visualizeLib = import ../../src/visualize.nix { inherit lib; };
-  opener = if pkgs.stdenv.isDarwin then "open" else "xdg-open";
+
+  # Use forked nixdoc with let-in identifier resolution
+  nixdocBin = nixdoc.packages.${pkgs.system}.default;
 
   # mdformat with plugins (same as formatter.nix)
   mdformat = pkgs.mdformat.withPlugins (
@@ -78,23 +81,68 @@ let
     ```
   '';
 
-  # Script to generate API reference
+  # Script to generate API reference (matches packages.nix)
   generateApiRef = pkgs.writeShellScript "generate-api-ref" ''
     set -e
     SITE_DIR="$1"
     SRC_DIR="$2"
+    README_FILE="$3"
+
+    # Copy README.md to site/src for Introduction page
+    cp "$README_FILE" "$SITE_DIR/src/README.md"
 
     {
       echo "# API Methods"
       echo ""
       echo "<!-- Auto-generated from src/api.nix - do not edit -->"
       echo ""
-      ${pkgs.nixdoc}/bin/nixdoc \
+      ${lib.getExe' nixdocBin "nixdoc"} \
         --file "$SRC_DIR/api.nix" \
         --category "" \
         --description "" \
         --prefix "imp" \
         --anchor-prefix ""
+
+      echo ""
+      echo "## Registry"
+      echo ""
+      ${lib.getExe' nixdocBin "nixdoc"} \
+        --file "$SRC_DIR/registry.nix" \
+        --category "" \
+        --description "" \
+        --prefix "imp" \
+        --anchor-prefix ""
+
+      echo ""
+      echo "## Format Flake"
+      echo ""
+      ${lib.getExe' nixdocBin "nixdoc"} \
+        --file "$SRC_DIR/format-flake.nix" \
+        --category "" \
+        --description "" \
+        --prefix "imp" \
+        --anchor-prefix ""
+
+      echo ""
+      echo "## Analyze"
+      echo ""
+      ${lib.getExe' nixdocBin "nixdoc"} \
+        --file "$SRC_DIR/analyze.nix" \
+        --category "" \
+        --description "" \
+        --prefix "imp" \
+        --anchor-prefix ""
+
+      echo ""
+      echo "## Visualize"
+      echo ""
+      ${lib.getExe' nixdocBin "nixdoc"} \
+        --file "$SRC_DIR/visualize.nix" \
+        --category "" \
+        --description "" \
+        --prefix "imp" \
+        --anchor-prefix ""
+
       cat <<'STANDALONE'
     ${standaloneSection}
     STANDALONE
@@ -152,14 +200,14 @@ in
           exit 1
         fi
 
-        echo "Generating API reference from src/api.nix..."
-        ${generateApiRef} ./site ./src
+        echo "Generating API reference from src/*.nix..."
+        ${generateApiRef} ./site ./src ./README.md
 
         echo "Starting mdbook server..."
         ${pkgs.mdbook}/bin/mdbook serve ./site &
         pid=$!
         sleep 1
-        ${opener} http://localhost:3000
+        echo "Documentation available at http://localhost:3000"
         wait $pid
       ''
     );
@@ -175,8 +223,8 @@ in
           exit 1
         fi
 
-        echo "Generating API reference from src/api.nix..."
-        ${generateApiRef} ./site ./src
+        echo "Generating API reference from src/*.nix..."
+        ${generateApiRef} ./site ./src ./README.md
 
         ${pkgs.mdbook}/bin/mdbook build ./site --dest-dir "$(pwd)/docs"
         echo "Documentation built to ./docs"

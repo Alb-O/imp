@@ -1,31 +1,49 @@
-/*
+/**
   Dependency graph analysis for imp.
 
   Provides functions to analyze config trees and registries, extracting
   dependency relationships for visualization.
 
+  # Example
+
   Graph structure:
-    {
-      nodes = [
-        { id = "modules.home.features.shell"; path = /path/to/shell; type = "configTree"; }
-        { id = "modules.home.features.devShell"; path = /path/to/devShell; type = "configTree"; }
-      ];
-      edges = [
-        { from = "modules.home.features.devShell"; to = "modules.home.features.shell"; type = "merge"; strategy = "merge"; }
-        { from = "modules.home.features.devShell"; to = "modules.home.features.devTools"; type = "merge"; strategy = "merge"; }
-      ];
-    }
+
+  ```nix
+  {
+    nodes = [
+      { id = "modules.home.features.shell"; path = /path/to/shell; type = "configTree"; }
+      { id = "modules.home.features.devShell"; path = /path/to/devShell; type = "configTree"; }
+    ];
+    edges = [
+      { from = "modules.home.features.devShell"; to = "modules.home.features.shell"; type = "merge"; strategy = "merge"; }
+      { from = "modules.home.features.devShell"; to = "modules.home.features.devTools"; type = "merge"; strategy = "merge"; }
+    ];
+  }
+  ```
 
   Usage:
-    # Analyze a registry to find all relationships
-    imp.analyze.registry registry
+
+  ```nix
+  # Analyze a registry to find all relationships
+  imp.analyze.registry registry
+  ```
 */
 { lib }:
 let
-  /*
+  /**
     Scan a directory and build a list of all .nix files with their logical paths.
 
-    Returns: [ { path = /abs/path.nix; segments = ["programs" "git"]; } ... ]
+    # Example
+
+    ```nix
+    scanDir ./nix
+    # => [ { path = /abs/path.nix; segments = ["programs" "git"]; } ... ]
+    ```
+
+    # Arguments
+
+    root
+    : Root directory to scan.
   */
   scanDir =
     root:
@@ -72,7 +90,7 @@ let
     in
     scanInner root [ ];
 
-  /*
+  /**
     Analyze a single configTree, returning nodes and edges.
 
     The path should be a directory. We scan it for .nix files and
@@ -80,6 +98,14 @@ let
 
     Note: We only collect refs from files directly in this directory,
     not from subdirectories (those are handled as separate nodes).
+
+    # Arguments
+
+    path
+    : Directory path to analyze.
+
+    id
+    : Identifier for this config tree node.
   */
   analyzeConfigTree =
     {
@@ -133,13 +159,19 @@ let
       edges = allEdges;
     };
 
-  /*
+  /**
     Analyze a mergeConfigTrees call.
 
-    Arguments:
-      - id: identifier for this merged tree
-      - sources: list of { id, path } for each source tree
-      - strategy: "merge" or "override"
+    # Arguments
+
+    id
+    : Identifier for this merged tree.
+
+    sources
+    : List of { id, path } for each source tree.
+
+    strategy
+    : Merge strategy ("merge" or "override").
   */
   analyzeMerge =
     {
@@ -166,12 +198,24 @@ let
       inherit edges;
     };
 
-  /*
+  /**
     Analyze an entire registry, discovering all modules and their relationships.
 
     This walks the registry structure, finds all configTrees, and analyzes
     each one for cross-references. Also generates hierarchical edges between
     parent and child nodes (e.g., modules -> modules.home).
+
+    # Example
+
+    ```nix
+    analyzeRegistry { registry = myRegistry; }
+    # => { nodes = [...]; edges = [...]; }
+    ```
+
+    # Arguments
+
+    registry
+    : Registry attrset to analyze.
   */
   analyzeRegistry =
     { registry }:

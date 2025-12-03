@@ -340,6 +340,294 @@ html = (imp.withLib lib).analyze.toHtml graph
 json = (imp.withLib lib).analyze.toJson graph
 ```
 
+## Registry
+
+## `imp.buildRegistry` {#imp.buildRegistry}
+
+Build registry from a directory.
+Returns nested attrset where each directory has \_\_path and child entries.
+
+### Arguments
+
+root
+: Root directory path to scan.
+
+## `imp.flattenRegistry` {#imp.flattenRegistry}
+
+Flatten registry to dot-notation paths.
+
+### Example
+
+```nix
+flattenRegistry registry
+# => { home.alice = <path>; modules.nixos = <path>; modules.nixos.base = <path>; }
+```
+
+### Arguments
+
+registry
+: Registry attrset to flatten.
+
+## `imp.lookup` {#imp.lookup}
+
+Lookup a dotted path in the registry.
+
+### Example
+
+```nix
+lookup "home.alice" registry
+# => <path>
+```
+
+### Arguments
+
+path
+: Dot-separated path string (e.g. "home.alice").
+
+registry
+: Registry attrset to search.
+
+## `imp.makeResolver` {#imp.makeResolver}
+
+Create a resolver function that looks up names in the registry.
+Returns a function: name -> path
+
+### Example
+
+```nix
+resolve = makeResolver registry;
+resolve "home.alice"
+# => <path>
+```
+
+### Arguments
+
+registry
+: Registry attrset to create resolver for.
+
+## `imp.toPath` {#imp.toPath}
+
+Get the path from a registry value.
+Works for both direct paths and registry nodes with \_\_path.
+
+### Arguments
+
+x
+: Registry value (path or node with \_\_path).
+
+## `imp.isRegistryNode` {#imp.isRegistryNode}
+
+Check if a value is a registry node (has \_\_path).
+
+### Arguments
+
+x
+: Value to check.
+
+## Format Flake
+
+## `imp.formatValue` {#imp.formatValue}
+
+Format a value as Nix source code.
+
+### Arguments
+
+depth
+: Indentation depth level.
+
+value
+: Value to format (string, bool, int, null, list, or attrset).
+
+## `imp.formatInput` {#imp.formatInput}
+
+Format a single input definition (at depth 1).
+
+### Arguments
+
+name
+: Input name.
+
+def
+: Input definition attrset.
+
+## `imp.formatInputs` {#imp.formatInputs}
+
+Format multiple inputs as a block.
+
+### Example
+
+```nix
+formatInputs { treefmt-nix = { url = "github:numtide/treefmt-nix"; }; }
+# => "treefmt-nix.url = \"github:numtide/treefmt-nix\";"
+```
+
+### Arguments
+
+inputs
+: Attrset of input definitions.
+
+## `imp.formatFlake` {#imp.formatFlake}
+
+Generate complete flake.nix content.
+
+### Example
+
+```nix
+formatFlake {
+  description = "My flake";
+  coreInputs = { nixpkgs.url = "github:nixos/nixpkgs"; };
+  collectedInputs = { treefmt-nix.url = "github:numtide/treefmt-nix"; };
+}
+```
+
+### Arguments
+
+description
+: Flake description string (optional).
+
+coreInputs
+: Core flake inputs attrset (optional).
+
+collectedInputs
+: Collected inputs from \_\_inputs declarations (optional).
+
+outputsFile
+: Path to outputs file (default: "./outputs.nix").
+
+header
+: Header comment for generated file (optional).
+
+## Analyze
+
+## `imp.analyzeConfigTree` {#imp.analyzeConfigTree}
+
+Analyze a single configTree, returning nodes and edges.
+
+The path should be a directory. We scan it for .nix files and
+read each one to check for registry references.
+
+Note: We only collect refs from files directly in this directory,
+not from subdirectories (those are handled as separate nodes).
+
+### Arguments
+
+path
+: Directory path to analyze.
+
+id
+: Identifier for this config tree node.
+
+## `imp.analyzeMerge` {#imp.analyzeMerge}
+
+Analyze a mergeConfigTrees call.
+
+### Arguments
+
+id
+: Identifier for this merged tree.
+
+sources
+: List of { id, path } for each source tree.
+
+strategy
+: Merge strategy ("merge" or "override").
+
+## `imp.analyzeRegistry` {#imp.analyzeRegistry}
+
+Analyze an entire registry, discovering all modules and their relationships.
+
+This walks the registry structure, finds all configTrees, and analyzes
+each one for cross-references. Also generates hierarchical edges between
+parent and child nodes (e.g., modules -> modules.home).
+
+### Example
+
+```nix
+analyzeRegistry { registry = myRegistry; }
+# => { nodes = [...]; edges = [...]; }
+```
+
+### Arguments
+
+registry
+: Registry attrset to analyze.
+
+## `imp.scanDir` {#imp.scanDir}
+
+Scan a directory and build a list of all .nix files with their logical paths.
+
+### Example
+
+```nix
+scanDir ./nix
+# => [ { path = /abs/path.nix; segments = ["programs" "git"]; } ... ]
+```
+
+### Arguments
+
+root
+: Root directory to scan.
+
+## Visualize
+
+## `imp.toHtml` {#imp.toHtml}
+
+Generate interactive HTML visualization using force-graph library.
+
+Features: hover highlighting, cluster coloring, animated dashed directional edges, auto-fix on drag.
+
+### Arguments
+
+graph
+: Graph with nodes and edges from analyze functions.
+
+## `imp.toJson` {#imp.toJson}
+
+Convert graph to a JSON-serializable structure with full paths.
+
+### Arguments
+
+graph
+: Graph with nodes and edges from analyze functions.
+
+## `imp.toJsonMinimal` {#imp.toJsonMinimal}
+
+Convert graph to JSON without paths (avoids store path issues with special chars).
+
+### Arguments
+
+graph
+: Graph with nodes and edges from analyze functions.
+
+## `imp.mkVisualizeScript` {#imp.mkVisualizeScript}
+
+Build a shell script that outputs the graph in the requested format.
+
+Can be called two ways:
+
+1. With pre-computed graph (for flakeModule - fast, no runtime eval):
+   mkVisualizeScript { pkgs, graph }
+
+1. With impSrc and nixpkgsFlake (standalone - runtime eval of arbitrary path):
+   mkVisualizeScript { pkgs, impSrc, nixpkgsFlake }
+
+### Arguments
+
+pkgs
+: nixpkgs package set (for writeShellScript).
+
+graph
+: Pre-analyzed graph (optional, for pre-computed mode).
+
+impSrc
+: Path to imp source (optional, for standalone mode).
+
+nixpkgsFlake
+: Nixpkgs flake reference string (optional, for standalone mode).
+
+name
+: Script name (default: "imp-vis").
+
 ## Standalone Utilities
 
 These functions work without calling `.withLib` first.

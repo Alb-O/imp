@@ -1,18 +1,22 @@
-# Formats flake inputs and generates flake.nix content.
-# Standalone implementation - no nixpkgs dependency, only builtins.
-#
-# Usage:
-#   formatInputs { treefmt-nix = { url = "..."; }; }
-#   # Returns: "treefmt-nix = {\n  url = \"...\";\n};\n"
-#
-#   formatFlake {
-#     description = "My flake";
-#     coreInputs = { nixpkgs.url = "..."; };
-#     collectedInputs = { treefmt-nix.url = "..."; };
-#     outputsFile = "./outputs.nix";
-#   }
-#   # Returns: full flake.nix content as string
+/**
+  Formats flake inputs and generates flake.nix content.
+  Standalone implementation - no nixpkgs dependency, only builtins.
 
+  # Example
+
+  ```nix
+  formatInputs { treefmt-nix = { url = "..."; }; }
+  # => "treefmt-nix = {\n  url = \"...\";\n};\n"
+
+  formatFlake {
+    description = "My flake";
+    coreInputs = { nixpkgs.url = "..."; };
+    collectedInputs = { treefmt-nix.url = "..."; };
+    outputsFile = "./outputs.nix";
+  }
+  # => full flake.nix content as string
+  ```
+*/
 let
   # Escape a string for Nix source code
   escapeString =
@@ -41,7 +45,17 @@ let
   # Format an attribute name (quote if necessary)
   formatAttrName = name: if isValidIdent name then name else quote name;
 
-  # Format a value as Nix source code
+  /**
+    Format a value as Nix source code.
+
+    # Arguments
+
+    depth
+    : Indentation depth level.
+
+    value
+    : Value to format (string, bool, int, null, list, or attrset).
+  */
   formatValue =
     depth: value:
     let
@@ -98,7 +112,20 @@ let
     in
     map formatOverride overrideNames;
 
-  # Format a single input definition at a given depth
+  /**
+    Format a single input definition at a given depth.
+
+    # Arguments
+
+    depth
+    : Indentation depth level.
+
+    name
+    : Input name.
+
+    def
+    : Input definition attrset.
+  */
   formatInputAt =
     depth: name: def:
     let
@@ -135,7 +162,17 @@ let
     else
       longform;
 
-  # Format a single input definition (legacy, depth 1)
+  /**
+    Format a single input definition (at depth 1).
+
+    # Arguments
+
+    name
+    : Input name.
+
+    def
+    : Input definition attrset.
+  */
   formatInput = formatInputAt 1;
 
   # Format multiple inputs as a block at a given depth
@@ -148,7 +185,21 @@ let
     in
     builtins.concatStringsSep "\n${indent}" lines;
 
-  # Format multiple inputs as a block (legacy, for tests - uses internal indent)
+  /**
+    Format multiple inputs as a block.
+
+    # Example
+
+    ```nix
+    formatInputs { treefmt-nix = { url = "github:numtide/treefmt-nix"; }; }
+    # => "treefmt-nix.url = \"github:numtide/treefmt-nix\";"
+    ```
+
+    # Arguments
+
+    inputs
+    : Attrset of input definitions.
+  */
   formatInputs =
     inputs:
     let
@@ -157,7 +208,36 @@ let
     in
     builtins.concatStringsSep "\n    " lines;
 
-  # Generate complete flake.nix content
+  /**
+    Generate complete flake.nix content.
+
+    # Example
+
+    ```nix
+    formatFlake {
+      description = "My flake";
+      coreInputs = { nixpkgs.url = "github:nixos/nixpkgs"; };
+      collectedInputs = { treefmt-nix.url = "github:numtide/treefmt-nix"; };
+    }
+    ```
+
+    # Arguments
+
+    description
+    : Flake description string (optional).
+
+    coreInputs
+    : Core flake inputs attrset (optional).
+
+    collectedInputs
+    : Collected inputs from __inputs declarations (optional).
+
+    outputsFile
+    : Path to outputs file (default: "./outputs.nix").
+
+    header
+    : Header comment for generated file (optional).
+  */
   formatFlake =
     {
       description ? "",
