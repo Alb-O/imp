@@ -11,7 +11,7 @@ in
 {
   # extractRegistryRefs tests
   migrate."test extracts single registry reference" = {
-    expr = migrateLib.extractRegistryRefs ''
+    expr = migrateLib.extractRegistryRefs "registry" ''
       { registry, ... }:
       { imports = [ registry.home.alice ]; }
     '';
@@ -19,7 +19,7 @@ in
   };
 
   migrate."test extracts multiple registry references" = {
-    expr = migrateLib.extractRegistryRefs ''
+    expr = migrateLib.extractRegistryRefs "registry" ''
       { registry, ... }:
       {
         imports = [
@@ -37,7 +37,7 @@ in
   };
 
   migrate."test extracts references from same line" = {
-    expr = migrateLib.extractRegistryRefs ''
+    expr = migrateLib.extractRegistryRefs "registry" ''
       foo = registry.a.b; bar = registry.c.d;
     '';
     expected = [
@@ -47,7 +47,7 @@ in
   };
 
   migrate."test ignores non-registry patterns" = {
-    expr = migrateLib.extractRegistryRefs ''
+    expr = migrateLib.extractRegistryRefs "registry" ''
       { pkgs, lib, ... }:
       {
         foo = "registry";
@@ -58,10 +58,18 @@ in
   };
 
   migrate."test handles deep nesting" = {
-    expr = migrateLib.extractRegistryRefs ''
+    expr = migrateLib.extractRegistryRefs "registry" ''
       registry.a.b.c.d.e
     '';
     expected = [ "a.b.c.d.e" ];
+  };
+
+  migrate."test extracts with custom registry name" = {
+    expr = migrateLib.extractRegistryRefs "impRegistry" ''
+      { impRegistry, ... }:
+      { imports = [ impRegistry.home.alice ]; }
+    '';
+    expected = [ "home.alice" ];
   };
 
   # collectNixFiles tests
@@ -180,7 +188,7 @@ in
     expected = 2; # config-b.nix and mixed.nix have broken refs with suggestions
   };
 
-  migrate."test detectRenames generates sed commands" = {
+  migrate."test detectRenames generates ast-grep commands" = {
     expr =
       let
         result = migrateLib.detectRenames {

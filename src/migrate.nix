@@ -1,11 +1,11 @@
 /*
-  Registry migration: detect renames and generate sed commands to update references.
+  Registry migration: detect renames and generate ast-grep commands to update references.
 
   When directories are renamed, registry paths change. This module:
   1. Scans files for registry.X.Y patterns
   2. Compares against current registry to find broken references
   3. Suggests mappings from old names to new names
-  4. Generates sed commands to fix all references
+  4. Generates ast-grep commands to fix all references
 
   Usage:
     migrate = import ./migrate.nix { inherit lib; };
@@ -37,19 +37,22 @@ let
   /*
     Extract all registry.X.Y.Z references from a file's content.
     Returns list of dotted paths like [ "home.alice" "modules.nixos" ]
+
+    The `name` parameter is the registry attribute name to search for.
   */
   extractRegistryRefs =
-    content:
+    name: content:
     let
-      # Match registry.foo.bar patterns (simplified regex approach)
+      # Match <name>.foo.bar patterns (simplified regex approach)
       # We'll use a line-by-line approach since Nix regex is limited
       lines = splitString "\n" content;
+      pattern = "${name}.";
 
       extractFromLine =
         line:
         let
-          # Find "registry." and extract the path after it
-          parts = splitString "registry." line;
+          # Find "<name>." and extract the path after it
+          parts = splitString pattern line;
           extractPath =
             s:
             let
@@ -152,21 +155,23 @@ let
     }
 
     The `astGrep` parameter is the path to the ast-grep binary.
+    The `registryName` parameter is the attribute name uast-grep for the registry (default: "registry").
   */
   detectRenames =
     {
       registry,
       paths,
       astGrep ? "ast-grep",
+      registryName ? "registry",
     }:
     let
       # Collect all nix files
       allFiles = unique (flatten (map collectNixFiles paths));
 
-      # Extract refs from each file
+      # Extract refs from each file using the configured registry name
       fileRefs = map (f: {
         file = f;
-        refs = extractRegistryRefs (readFile f);
+        refs = extractRegistryRefs registryName (readFile f);
       }) allFiles;
 
       # Find broken refs
@@ -187,7 +192,8 @@ let
       # Generate ast-grep commands for each rename
       # Match the exact broken path and replace with the new path
       astGrepCommands = mapAttrsToList (
-        old: new: "${astGrep} --lang nix --pattern 'registry.${old}' --rewrite 'registry.${new}'"
+        old: new:
+        "${astGrep} --lang nix --pattern '${registryName}.${old}' --rewrite '${registryName}.${new}'"
       ) suggestions;
 
       # Files that need updating (store paths)

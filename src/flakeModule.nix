@@ -55,12 +55,8 @@ let
       let
         fullTree = buildTree cfg.src (
           {
-            inherit
-              lib
-              self
-              inputs
-              registry
-              ;
+            inherit lib self inputs;
+            ${cfg.registry.name} = registry;
           }
           // cfg.args
         );
@@ -126,6 +122,23 @@ in
       };
 
       registry = {
+        name = mkOption {
+          type = types.str;
+          default = "registry";
+          description = ''
+            Attribute name used to inject the registry into file arguments.
+
+            Change this if "registry" conflicts with other inputs or arguments.
+
+            Example:
+              registry.name = "impRegistry";
+              
+            Then in files:
+              { impRegistry, ... }:
+              { imports = [ impRegistry.modules.home ]; }
+          '';
+        };
+
         src = mkOption {
           type = types.nullOr types.path;
           default = null;
@@ -255,8 +268,8 @@ in
               self'
               inputs
               inputs'
-              registry
               ;
+            ${cfg.registry.name} = registry;
           }
           // cfg.args
           // config.imp.args;
@@ -341,6 +354,7 @@ in
             inherit registry;
             paths = migratePaths;
             astGrep = "${pkgs.ast-grep}/bin/ast-grep";
+            registryName = cfg.registry.name;
           };
         in
         {

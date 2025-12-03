@@ -134,6 +134,7 @@ Click to expand overview sections below:
 | `imp.src`                   | path   | null            | Directory containing outputs        |
 | `imp.args`                  | attrs  | {}              | Extra args passed to all files      |
 | `imp.perSystemDir`          | string | "perSystem"     | Subdirectory name for per-system    |
+| `imp.registry.name`         | string | "registry"      | Attribute name for registry arg     |
 | `imp.registry.src`          | path   | null            | Root directory for module registry  |
 | `imp.registry.modules`      | attrs  | {}              | Explicit name->path overrides       |
 | `imp.registry.migratePaths` | list   | []              | Directories to scan for renames     |
