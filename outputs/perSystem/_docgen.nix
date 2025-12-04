@@ -1,4 +1,5 @@
-# Shared documentation generation utilities
+# Documentation generation utilities
+# Reads structure from src/_docs.nix and generates reference docs
 {
   pkgs,
   lib,
@@ -16,6 +17,9 @@ let
       mdformat-footnote
     ]
   );
+
+  # Load documentation manifest from source
+  docsManifest = import ../../src/_docs.nix;
 
   # Use shared options schema for documentation generation
   optionsSchema = import ../../src/options-schema.nix { inherit lib; };
@@ -45,6 +49,127 @@ let
   # Write options JSON to a file
   optionsJsonFile = pkgs.writeText "imp-options.json" optionsJson;
 
+  # Helper to normalize file entries (string or attrset)
+  normalizeFileEntry = entry: if builtins.isString entry then { name = entry; } else entry;
+
+  # Escape backticks for shell echo
+  escapeForShell = s: builtins.replaceStrings [ "`" ] [ "\\`" ] s;
+
+  # Generate markdown heading with given level (1-6)
+  mkHeading = level: text: lib.concatStrings (lib.genList (_: "#") level) + " ${text}";
+
+  # Generate the shell commands for files.md from manifest
+  generateFilesCommands =
+    let
+      filesConfig = docsManifest.files;
+      sections = filesConfig.sections;
+
+      # Heading levels derived from titleLevel
+      # title: H1, sections: H2, files: H3, content shifted by 3
+      titleLevel = filesConfig.titleLevel or 1;
+      sectionLevel = titleLevel + 1;
+      fileLevel = titleLevel + 2;
+      # Content headings in doc comments start at H1, need to become fileLevel + 1
+      contentShift = fileLevel;
+
+      # Generate commands for a single file entry
+      fileCommands =
+        entry:
+        let
+          normalized = normalizeFileEntry entry;
+          filename = normalized.name;
+          fallback = normalized.fallback or null;
+          escapedFallback = if fallback != null then escapeForShell fallback else null;
+          heading = mkHeading fileLevel filename;
+        in
+        ''
+          echo "${heading}"
+          echo ""
+        ''
+        + (
+          if escapedFallback != null then
+            ''
+              echo "${escapedFallback}"
+              echo ""
+            ''
+          else
+            ''
+              $NIXDOC file-doc --file "$SRC_DIR/${filename}" --shift-headings ${toString contentShift} || true
+              echo ""
+            ''
+        );
+
+      # Generate commands for a section
+      sectionCommands =
+        section:
+        let
+          heading = mkHeading sectionLevel section.name;
+        in
+        ''
+          echo "${heading}"
+          echo ""
+        ''
+        + lib.concatMapStrings fileCommands section.files;
+
+      titleHeading = mkHeading titleLevel filesConfig.title;
+    in
+    ''
+      echo "${titleHeading}"
+      echo ""
+      echo "<!-- Auto-generated from src/*.nix file-level comments - do not edit -->"
+      echo ""
+    ''
+    + lib.concatMapStrings sectionCommands sections;
+
+  # Generate the shell commands for methods.md from manifest
+  generateMethodsCommands =
+    let
+      methodsConfig = docsManifest.methods;
+      sections = methodsConfig.sections;
+
+      # Heading levels derived from titleLevel
+      titleLevel = methodsConfig.titleLevel or 1;
+      sectionLevel = titleLevel + 1;
+
+      # Generate commands for a single method section
+      sectionCommands =
+        section:
+        let
+          hasHeading = section ? heading;
+          hasExports = section ? exports;
+          exportArg = if hasExports then "--export ${lib.concatStringsSep "," section.exports}" else "";
+          heading = mkHeading sectionLevel section.heading;
+        in
+        (
+          if hasHeading then
+            ''
+              echo ""
+              echo "${heading}"
+              echo ""
+            ''
+          else
+            ""
+        )
+        + ''
+          $NIXDOC \
+            --file "$SRC_DIR/${section.file}" \
+            --category "" \
+            --description "" \
+            --prefix "imp" \
+            --anchor-prefix "" \
+            ${exportArg}
+        '';
+
+      titleHeading = mkHeading titleLevel methodsConfig.title;
+    in
+    ''
+      echo "${titleHeading}"
+      echo ""
+      echo "<!-- Auto-generated from src/*.nix - do not edit -->"
+      echo ""
+    ''
+    + lib.concatMapStrings sectionCommands sections;
+
   # Script to generate API reference docs
   # Takes $SRC_DIR, $OUT_DIR, $OPTIONS_JSON as arguments
   generateDocsScript = pkgs.writeShellScript "generate-docs" ''
@@ -58,77 +183,7 @@ let
 
     # Generate methods.md
     {
-      echo "# API Methods"
-      echo ""
-      echo "<!-- Auto-generated from src/*.nix - do not edit -->"
-      echo ""
-      $NIXDOC \
-        --file "$SRC_DIR/api.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix ""
-
-      echo ""
-      echo "## Registry"
-      echo ""
-      $NIXDOC \
-        --file "$SRC_DIR/registry.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix ""
-
-      echo ""
-      echo "## Format Flake"
-      echo ""
-      $NIXDOC \
-        --file "$SRC_DIR/format-flake.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix ""
-
-      echo ""
-      echo "## Analyze"
-      echo ""
-      $NIXDOC \
-        --file "$SRC_DIR/analyze.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix ""
-
-      echo ""
-      echo "## Visualize"
-      echo ""
-      $NIXDOC \
-        --file "$SRC_DIR/visualize.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix ""
-
-      echo ""
-      echo "## Migrate"
-      echo ""
-      $NIXDOC \
-        --file "$SRC_DIR/migrate.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix ""
-
-      echo ""
-      echo "## Standalone Utilities"
-      echo ""
-      $NIXDOC \
-        --file "$SRC_DIR/default.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix "" \
-        --export collectInputs,collectAndFormatFlake
+      ${generateMethodsCommands}
     } > "$OUT_DIR/methods.md"
 
     # Generate options.md
@@ -140,95 +195,7 @@ let
 
     # Generate files.md from file-level doc comments
     {
-      echo "# File Reference"
-      echo ""
-      echo "<!-- Auto-generated from src/*.nix file-level comments - do not edit -->"
-      echo ""
-
-      echo "## Core"
-      echo ""
-
-      echo "### default.nix"
-      echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/default.nix" --shift-headings 3 || true
-      echo ""
-
-      echo "### api.nix"
-      echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/api.nix" --shift-headings 3 || true
-      echo ""
-
-      echo "### lib.nix"
-      echo ""
-      echo "Internal utility functions for imp."
-      echo ""
-
-      echo "## Import & Collection"
-      echo ""
-
-      echo "### collect.nix"
-      echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/collect.nix" --shift-headings 3 || true
-      echo ""
-
-      echo "### tree.nix"
-      echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/tree.nix" --shift-headings 3 || true
-      echo ""
-
-      echo "## Config Trees"
-      echo ""
-
-      echo "### configTree.nix"
-      echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/configTree.nix" --shift-headings 3 || true
-      echo ""
-
-      echo "### mergeConfigTrees.nix"
-      echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/mergeConfigTrees.nix" --shift-headings 3 || true
-      echo ""
-
-      echo "## Registry"
-      echo ""
-
-      echo "### registry.nix"
-      echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/registry.nix" --shift-headings 3 || true
-      echo ""
-
-      echo "### migrate.nix"
-      echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/migrate.nix" --shift-headings 3 || true
-      echo ""
-
-      echo "### analyze.nix"
-      echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/analyze.nix" --shift-headings 3 || true
-      echo ""
-
-      echo "### visualize.nix"
-      echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/visualize.nix" --shift-headings 3 || true
-      echo ""
-
-      echo "## Flake Integration"
-      echo ""
-
-      echo "### flakeModule.nix"
-      echo ""
-      echo "flake-parts module, defines \`imp.*\` options."
-      echo ""
-
-      echo "### collect-inputs.nix"
-      echo ""
-      echo "\`__inputs\` collection from flake inputs."
-      echo ""
-
-      echo "### format-flake.nix"
-      echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/format-flake.nix" --shift-headings 3 || true
-      echo ""
+      ${generateFilesCommands}
     } > "$OUT_DIR/files.md"
 
     # Format all generated markdown
