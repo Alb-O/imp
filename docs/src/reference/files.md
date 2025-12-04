@@ -314,16 +314,9 @@ Usage:
 imp.analyze.registry registry
 ```
 
-### visualize.nix
+### visualize/default.nix
 
-Visualization output for imp dependency graphs.
-
-Provides functions to format analyzed graphs for output:
-
-- toJson: Full JSON with paths
-- toJsonMinimal: Minimal JSON without paths
-- toHtml: Interactive HTML visualization
-- mkVisualizeScript: Shell script for CLI usage
+Visualization output for dependency graphs.
 
 ## Flake Integration
 

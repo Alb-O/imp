@@ -41,7 +41,10 @@
           "registry.nix"
           "migrate.nix"
           "analyze.nix"
-          "visualize.nix"
+          {
+            name = "visualize/default.nix";
+            fallback = "Visualization output for dependency graphs.";
+          }
         ];
       }
       {
@@ -84,7 +87,7 @@
       }
       {
         heading = "Visualize";
-        file = "visualize.nix";
+        file = "visualize/default.nix";
       }
       {
         heading = "Migrate";

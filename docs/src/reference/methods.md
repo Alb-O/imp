@@ -537,20 +537,27 @@ strategy
 Analyze an entire registry, discovering all modules and their relationships.
 
 This walks the registry structure, finds all configTrees, and analyzes
-each one for cross-references. Also generates hierarchical edges between
-parent and child nodes (e.g., modules -> modules.home).
+each one for cross-references. Optionally also scans an outputs directory
+to include flake outputs (like nixosConfigurations) as sink nodes.
 
 ### Example
 
 ```nix
 analyzeRegistry { registry = myRegistry; }
 # => { nodes = [...]; edges = [...]; }
+
+# With outputs directory
+analyzeRegistry { registry = myRegistry; outputsSrc = ./outputs; }
 ```
 
 ### Arguments
 
 registry
 : Registry attrset to analyze.
+
+outputsSrc
+: Optional path to outputs directory (e.g., imp.src). Files here that
+reference registry paths will be included as output nodes.
 
 ## `imp.scanDir` {#imp.scanDir}
 

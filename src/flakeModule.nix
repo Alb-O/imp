@@ -267,8 +267,11 @@ in
           };
 
           analyzeLib = import ./analyze.nix { inherit lib; };
-          visualizeLib = import ./visualize.nix { inherit lib; };
-          graph = analyzeLib.analyzeRegistry { inherit registry; };
+          visualizeLib = import ./visualize { inherit lib; };
+          graph = analyzeLib.analyzeRegistry {
+            inherit registry;
+            outputsSrc = cfg.src;
+          };
         in
         {
           /*

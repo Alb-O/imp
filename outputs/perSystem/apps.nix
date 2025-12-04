@@ -9,7 +9,7 @@
   ...
 }:
 let
-  visualizeLib = import ../../src/visualize.nix { inherit lib; };
+  visualizeLib = import ../../src/visualize { inherit lib; };
 
   # Import docgen configuration from docs/
   dg = import ../../docs/docgen.nix { inherit pkgs lib docgen; };

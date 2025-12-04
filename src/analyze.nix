@@ -202,23 +202,33 @@ let
     Analyze an entire registry, discovering all modules and their relationships.
 
     This walks the registry structure, finds all configTrees, and analyzes
-    each one for cross-references. Also generates hierarchical edges between
-    parent and child nodes (e.g., modules -> modules.home).
+    each one for cross-references. Optionally also scans an outputs directory
+    to include flake outputs (like nixosConfigurations) as sink nodes.
 
     # Example
 
     ```nix
     analyzeRegistry { registry = myRegistry; }
     # => { nodes = [...]; edges = [...]; }
+
+    # With outputs directory
+    analyzeRegistry { registry = myRegistry; outputsSrc = ./outputs; }
     ```
 
     # Arguments
 
     registry
     : Registry attrset to analyze.
+
+    outputsSrc
+    : Optional path to outputs directory (e.g., imp.src). Files here that
+      reference registry paths will be included as output nodes.
   */
   analyzeRegistry =
-    { registry }:
+    {
+      registry,
+      outputsSrc ? null,
+    }:
     let
       # Flatten registry to get all paths
       flattenWithPath =
@@ -304,8 +314,62 @@ let
 
       # Merge all results and deduplicate nodes by id
       rawNodes = lib.concatMap (r: r.nodes) results;
-      allNodes = lib.attrValues (lib.foldl' (acc: node: acc // { ${node.id} = node; }) { } rawNodes);
-      allEdges = lib.concatMap (r: r.edges) results;
+      registryNodes = lib.attrValues (lib.foldl' (acc: node: acc // { ${node.id} = node; }) { } rawNodes);
+      registryEdges = lib.concatMap (r: r.edges) results;
+
+      # Scan outputs directory if provided
+      outputsResults =
+        if outputsSrc == null || !builtins.pathExists outputsSrc then
+          {
+            nodes = [ ];
+            edges = [ ];
+          }
+        else
+          let
+            # Scan all .nix files in outputs directory
+            scannedFiles = scanDir outputsSrc;
+
+            # Analyze each file for registry references
+            analyzeOutputFile =
+              file:
+              let
+                content = builtins.readFile file.path;
+                # Find registry.foo.bar patterns
+                matches = builtins.split "(registry\\.[a-zA-Z0-9_.]+)" content;
+                refs = lib.filter (m: builtins.isList m) matches;
+                refStrings = map (m: builtins.elemAt m 0) refs;
+                uniqueRefs = lib.unique refStrings;
+                # Build id from segments: outputs.nixosConfigurations.myhost
+                fileId = "outputs.${lib.concatStringsSep "." file.segments}";
+              in
+              if uniqueRefs == [ ] then
+                null # Skip files with no registry references
+              else
+                {
+                  node = {
+                    id = fileId;
+                    path = file.path;
+                    type = "output";
+                  };
+                  # Edge direction: from=source (what's imported), to=destination (consumer)
+                  # This matches registry edges and means arrows point toward sinks (outputs)
+                  edges = map (ref: {
+                    from = lib.removePrefix "registry." ref;
+                    to = fileId;
+                    type = "import";
+                  }) uniqueRefs;
+                };
+
+            analyzed = lib.filter (x: x != null) (map analyzeOutputFile scannedFiles);
+          in
+          {
+            nodes = map (a: a.node) analyzed;
+            edges = lib.concatMap (a: a.edges) analyzed;
+          };
+
+      # Combine registry and outputs
+      allNodes = registryNodes ++ outputsResults.nodes;
+      allEdges = registryEdges ++ outputsResults.edges;
 
       # Build set of known node IDs for validation
       knownIds = lib.listToAttrs (map (n: lib.nameValuePair n.id true) allNodes);
@@ -319,13 +383,13 @@ let
         edge // { from = sourceId; }
       ) allEdges;
 
-      # Filter registry edges to only those from known nodes, and deduplicate
+      # Filter edges to only those where both endpoints exist, and deduplicate
       deduplicatedEdges = lib.unique resolvedEdges;
-      validRegistryEdges = lib.filter (e: knownIds ? ${e.from}) deduplicatedEdges;
+      validEdges = lib.filter (e: knownIds ? ${e.from} && knownIds ? ${e.to}) deduplicatedEdges;
     in
     {
       nodes = allNodes;
-      edges = validRegistryEdges;
+      edges = validEdges;
     };
 
 in

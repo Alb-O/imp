@@ -33,9 +33,11 @@ in
     let
       result = analyze.analyzeRegistry { registry = testRegistry; };
       html = analyze.toHtml result;
+      trimmed = lib.trim html;
     in
     {
-      expr = lib.hasPrefix "<!DOCTYPE html>" (lib.trim html);
+      # Check for doctype (case-insensitive) - formatter may change case
+      expr = lib.hasPrefix "<!doctype html>" (lib.toLower trimmed);
       expected = true;
     };
 

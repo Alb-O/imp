@@ -456,7 +456,7 @@ in
     else
       let
         analyzeLib = import ./analyze.nix { inherit (updated) lib; };
-        visualizeLib = import ./visualize.nix { inherit (updated) lib; };
+        visualizeLib = import ./visualize { inherit (updated) lib; };
       in
       analyzeLib // visualizeLib;
 }

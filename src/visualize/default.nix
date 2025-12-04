@@ -9,8 +9,9 @@
 */
 { lib }:
 let
-  # Read the JavaScript template
-  jsTemplate = builtins.readFile ./visualize-html.js;
+  # Read templates
+  jsTemplate = builtins.readFile ./template.js;
+  htmlTemplate = builtins.readFile ./template.html;
 
   /**
     Convert graph to a JSON-serializable structure with full paths.
@@ -38,6 +39,21 @@ let
       n: { inherit (n) id type; } // lib.optionalAttrs (n ? strategy) { inherit (n) strategy; }
     ) graph.nodes;
     edges = graph.edges;
+  };
+
+  # Default cluster colors for visualization
+  clusterColors = {
+    "modules.home" = "#1976d2";
+    "modules.nixos" = "#7b1fa2";
+    "outputs.nixosConfigurations" = "#e65100";
+    "outputs.homeConfigurations" = "#2e7d32";
+    "outputs.perSystem" = "#757575";
+    "hosts.server" = "#c62828";
+    "hosts.vm" = "#c62828";
+    "hosts.workstation" = "#c62828";
+    "users.alice" = "#00838f";
+    "flake" = "#455a64";
+    "flake.inputs" = "#78909c";
   };
 
   /**
@@ -133,85 +149,17 @@ let
         links = finalEdges;
       };
 
-      # Cluster colors
-      clusterColorsJson = builtins.toJSON {
-        "modules.home" = "#1976d2";
-        "modules.nixos" = "#7b1fa2";
-        "outputs.nixosConfigurations" = "#e65100";
-        "outputs.homeConfigurations" = "#2e7d32";
-        "outputs.perSystem" = "#757575";
-        "hosts.server" = "#c62828";
-        "hosts.vm" = "#c62828";
-        "hosts.workstation" = "#c62828";
-        "users.alice" = "#00838f";
-        "flake" = "#455a64";
-        "flake.inputs" = "#78909c";
-      };
+      clusterColorsJson = builtins.toJSON clusterColors;
 
       # Substitute placeholders in JS template
       jsCode =
         builtins.replaceStrings [ "/*GRAPH_DATA*/" "/*CLUSTER_COLORS*/" ] [ graphJson clusterColorsJson ]
           jsTemplate;
-    in
-    ''
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <title>imp Registry Visualization</title>
-          <style>
-            body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #2d2d2d; }
-            #graph { width: 100vw; height: 100vh; }
-            #info {
-              position: absolute;
-              top: 10px;
-              left: 10px;
-              background: rgba(45,45,45,0.95);
-              color: #eee;
-              padding: 12px 16px;
-              border-radius: 8px;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              font-size: 13px;
-              max-width: 300px;
-              z-index: 100;
-            }
-            #info h3 { margin: 0 0 8px 0; font-size: 14px; color: #fff; }
-            #info .cluster { color: #aaa; font-size: 11px; margin-bottom: 4px; }
-            #info .nodes { white-space: pre-wrap; font-family: monospace; font-size: 12px; }
-            #legend {
-              position: absolute;
-              bottom: 10px;
-              left: 10px;
-              background: rgba(45,45,45,0.95);
-              color: #eee;
-              padding: 10px 14px;
-              border-radius: 8px;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              font-size: 11px;
-              z-index: 100;
-            }
-            #legend h4 { margin: 0 0 6px 0; font-size: 12px; color: #fff; }
-            .legend-item { display: flex; align-items: center; margin: 3px 0; }
-            .legend-color { width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; }
-          </style>
-          <script src="https://cdn.jsdelivr.net/npm/force-graph"></script>
-        </head>
-        <body>
-          <div id="graph"></div>
-          <div id="info">
-            <h3>imp Registry</h3>
-            <div class="hint">Hover over nodes to highlight connections</div>
-          </div>
-          <div id="legend">
-            <h4>Clusters</h4>
-          </div>
 
-          <script>
-      ${jsCode}
-          </script>
-        </body>
-        </html>
-    '';
+      # Substitute JS into HTML template
+      html = builtins.replaceStrings [ "/*SCRIPT*/" ] [ jsCode ] htmlTemplate;
+    in
+    html;
 
   /**
     Build a shell script that outputs the graph in the requested format.
@@ -301,7 +249,7 @@ let
         ${pkgs.nix}/bin/nix eval --raw --impure --expr '
           let
             lib = (builtins.getFlake "${nixpkgsFlake}").lib;
-            visualizeLib = import ("${impSrc}" + "/src/visualize.nix") { inherit lib; };
+            visualizeLib = import ("${impSrc}" + "/src/visualize") { inherit lib; };
             analyzeLib = import ("${impSrc}" + "/src/analyze.nix") { inherit lib; };
             registryLib = import ("${impSrc}" + "/src/registry.nix") { inherit lib; };
 
@@ -356,5 +304,6 @@ in
     toJson
     toJsonMinimal
     mkVisualizeScript
+    clusterColors
     ;
 }
