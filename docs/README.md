@@ -1,4 +1,4 @@
-# Site
+# Docs
 
 Documentation source for imp, built with `mdbook`.
 

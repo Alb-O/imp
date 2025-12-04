@@ -7,7 +7,7 @@
 }:
 let
   # Use shared options schema for documentation generation
-  optionsSchema = import ../../src/options-schema.nix { inherit lib; };
+  optionsSchema = import ../src/options-schema.nix { inherit lib; };
 
   # Use docgen's helper to convert options module to JSON
   optionsJson = docgen.lib.optionsToJson {
@@ -20,11 +20,11 @@ in
 docgen.mkDocgen {
   inherit pkgs lib;
   name = "imp";
-  manifest = ../../src/_docs.nix;
-  srcDir = ../../src;
-  siteDir = ../../site;
+  manifest = ./manifest.nix;
+  srcDir = ../src;
+  siteDir = ./.;
   extraFiles = {
-    "README.md" = ../../README.md;
+    "README.md" = ../README.md;
   };
   optionsJson = optionsJsonFile;
   anchorPrefix = "imp";

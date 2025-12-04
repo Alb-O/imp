@@ -8,11 +8,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1764813644,
-        "narHash": "sha256-077Ze57J1fOUDMjK1dn5HiwWqTEQ6z1ocY6ocUgIx48=",
+        "lastModified": 1764814955,
+        "narHash": "sha256-UPdzutI8i/CbSzu/VPtRUmwyrMLYxyeT0Mrp944fxp4=",
         "owner": "Alb-O",
         "repo": "docgen",
-        "rev": "77a951fcf67c62613b9af372f4e07aa7dec53139",
+        "rev": "5ade6d753219fd8feacd792df9fe60306238b728",
         "type": "github"
       },
       "original": {

@@ -11,8 +11,8 @@
 let
   visualizeLib = import ../../src/visualize.nix { inherit lib; };
 
-  # Import shared docgen utilities
-  dg = import ./_docgen.nix { inherit pkgs lib docgen; };
+  # Import docgen configuration from docs/
+  dg = import ../../docs/docgen.nix { inherit pkgs lib docgen; };
 in
 {
   tests = {
@@ -58,7 +58,7 @@ in
 
   build-docs = {
     type = "app";
-    meta.description = "Build the Imp documentation './site/book' directory.";
+    meta.description = "Build the Imp documentation to './docs/book' directory.";
     program = toString dg.buildDocsScript;
   };
 }
