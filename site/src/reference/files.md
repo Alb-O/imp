@@ -52,7 +52,7 @@ Naming: foo.nix | foo/default.nix -> { foo = ... }
 foo\_.nix -> { foo = ... } (escapes reserved names)
 \_foo.nix | \_foo/ -> ignored
 
-# Example
+#### Example
 
 Directory structure:
 
@@ -82,7 +82,7 @@ Returns:
 }
 ```
 
-# Usage
+#### Usage
 
 ```nix
 (imp.withLib lib).tree ./outputs
@@ -107,7 +107,7 @@ and returns config values. The path becomes the option path:
 - `programs/git.nix` -> `{ programs.git = <result>; }`
 - `services/nginx/default.nix` -> `{ services.nginx = <result>; }`
 
-# Example
+#### Example
 
 Directory structure:
 
@@ -129,7 +129,7 @@ Example file (home/programs/git.nix):
 }
 ```
 
-# Usage
+#### Usage
 
 ```nix
 { inputs, ... }:
@@ -169,7 +169,7 @@ features/
   devShell/programs/{git,zsh}.nix      # extends shell, overrides zsh
 ```
 
-# Usage
+#### Usage
 
 Override strategy (default):
 
@@ -210,7 +210,7 @@ Registry: Named module discovery and resolution.
 Scans a directory tree and builds a nested attrset mapping names to paths.
 Files can then reference modules by name instead of relative paths.
 
-# Example
+#### Example
 
 Directory structure:
 
@@ -271,7 +271,7 @@ When directories are renamed, registry paths change. This module:
 1. Suggests mappings from old names to new names
 1. Generates ast-grep commands to fix all references
 
-# Usage
+#### Usage
 
 ```nix
 migrate = import ./migrate.nix { inherit lib; };
@@ -290,7 +290,7 @@ Dependency graph analysis for imp.
 Provides functions to analyze config trees and registries, extracting
 dependency relationships for visualization.
 
-# Example
+#### Example
 
 Graph structure:
 
@@ -340,7 +340,7 @@ flake-parts module, defines `imp.*` options.
 Formats flake inputs and generates flake.nix content.
 Standalone implementation - no nixpkgs dependency, only builtins.
 
-# Example
+#### Example
 
 ```nix
 formatInputs { treefmt-nix = { url = "..."; }; }

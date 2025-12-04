@@ -150,12 +150,12 @@ let
 
       echo "### default.nix"
       echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/default.nix" || true
+      $NIXDOC file-doc --file "$SRC_DIR/default.nix" --shift-headings 3 || true
       echo ""
 
       echo "### api.nix"
       echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/api.nix" || true
+      $NIXDOC file-doc --file "$SRC_DIR/api.nix" --shift-headings 3 || true
       echo ""
 
       echo "### lib.nix"
@@ -168,12 +168,12 @@ let
 
       echo "### collect.nix"
       echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/collect.nix" || true
+      $NIXDOC file-doc --file "$SRC_DIR/collect.nix" --shift-headings 3 || true
       echo ""
 
       echo "### tree.nix"
       echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/tree.nix" || true
+      $NIXDOC file-doc --file "$SRC_DIR/tree.nix" --shift-headings 3 || true
       echo ""
 
       echo "## Config Trees"
@@ -181,12 +181,12 @@ let
 
       echo "### configTree.nix"
       echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/configTree.nix" || true
+      $NIXDOC file-doc --file "$SRC_DIR/configTree.nix" --shift-headings 3 || true
       echo ""
 
       echo "### mergeConfigTrees.nix"
       echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/mergeConfigTrees.nix" || true
+      $NIXDOC file-doc --file "$SRC_DIR/mergeConfigTrees.nix" --shift-headings 3 || true
       echo ""
 
       echo "## Registry"
@@ -194,22 +194,22 @@ let
 
       echo "### registry.nix"
       echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/registry.nix" || true
+      $NIXDOC file-doc --file "$SRC_DIR/registry.nix" --shift-headings 3 || true
       echo ""
 
       echo "### migrate.nix"
       echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/migrate.nix" || true
+      $NIXDOC file-doc --file "$SRC_DIR/migrate.nix" --shift-headings 3 || true
       echo ""
 
       echo "### analyze.nix"
       echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/analyze.nix" || true
+      $NIXDOC file-doc --file "$SRC_DIR/analyze.nix" --shift-headings 3 || true
       echo ""
 
       echo "### visualize.nix"
       echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/visualize.nix" || true
+      $NIXDOC file-doc --file "$SRC_DIR/visualize.nix" --shift-headings 3 || true
       echo ""
 
       echo "## Flake Integration"
@@ -227,7 +227,7 @@ let
 
       echo "### format-flake.nix"
       echo ""
-      $NIXDOC file-doc --file "$SRC_DIR/format-flake.nix" || true
+      $NIXDOC file-doc --file "$SRC_DIR/format-flake.nix" --shift-headings 3 || true
       echo ""
     } > "$OUT_DIR/files.md"
 

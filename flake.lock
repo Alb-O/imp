@@ -124,11 +124,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1764809279,
-        "narHash": "sha256-80ti2p/LIwAVxI1QTYFHbJd4SdCeK1w5r4TmeNTA3fI=",
+        "lastModified": 1764810174,
+        "narHash": "sha256-lX465UecdnJOEyQSWe+q7IAeUW7OkhkK/QMuYti0JDM=",
         "owner": "Alb-O",
         "repo": "nixdoc",
-        "rev": "532b68279bf843cc79cccdd822a15fcec9cc2d22",
+        "rev": "b74d7e43cdcbc7e88c64428361b15215e9fecd08",
         "type": "github"
       },
       "original": {
