@@ -7,7 +7,7 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     nix-unit.url = "github:nix-community/nix-unit";
     treefmt-nix.url = "github:numtide/treefmt-nix";
-    docgen.url = "github:Alb-O/docgen";
+    docgen.url = "github:imp-nix/imp.docgen";
   };
 
   outputs =

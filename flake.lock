@@ -8,16 +8,16 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1764814955,
-        "narHash": "sha256-UPdzutI8i/CbSzu/VPtRUmwyrMLYxyeT0Mrp944fxp4=",
-        "owner": "Alb-O",
-        "repo": "docgen",
-        "rev": "5ade6d753219fd8feacd792df9fe60306238b728",
+        "lastModified": 1764818291,
+        "narHash": "sha256-lclN/MDQV0AU+EAhjcg6W5NgixusKCx53DRv6qNgERE=",
+        "owner": "imp-nix",
+        "repo": "imp.docgen",
+        "rev": "7ad2b90953bfdfe02736731bb2fec1ace43f5502",
         "type": "github"
       },
       "original": {
-        "owner": "Alb-O",
-        "repo": "docgen",
+        "owner": "imp-nix",
+        "repo": "imp.docgen",
         "type": "github"
       }
     },

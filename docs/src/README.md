@@ -8,7 +8,7 @@ Primarily inspired by @vic's [Dendritic pattern (and related projects)](https://
 
 ```nix
 {
-  inputs.imp.url = "github:Alb-O/imp";
+  inputs.imp.url = "github:imp-nix/imp.lib";
   inputs.flake-parts.url = "github:hercules-ci/flake-parts";
 }
 ```
@@ -51,7 +51,7 @@ imp.treeWith lib import ./outputs
 
 ## Documentation
 
-Full documentation, examples, and API reference, [click here](https://alb-o.github.io/imp).
+Full documentation, examples, and API reference, [click here](https://imp-nix.github.io/imp.lib).
 
 ## Development
 

@@ -25,7 +25,7 @@ modules/
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    imp.url = "github:Alb-O/imp";
+    imp.url = "github:imp-nix/imp.lib";
   };
 
   outputs = { nixpkgs, imp, ... }:
