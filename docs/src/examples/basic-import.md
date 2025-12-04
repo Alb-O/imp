@@ -1,5 +1,7 @@
 # Basic Import
 
+The simplest use of imp: import all modules in a directory.
+
 ```
 modules/
   networking.nix
@@ -10,8 +12,6 @@ modules/
     ssh.nix
 ```
 
-## Usage
-
 ```nix
 { inputs, ... }:
 {
@@ -19,7 +19,9 @@ modules/
 }
 ```
 
-## In a flake
+Every `.nix` file gets imported. Subdirectories are traversed recursively. Just add a file to the directory tree (and `git add` it), it gets imported for you.
+
+## Basic Import In a Flake
 
 ```nix
 {
@@ -43,6 +45,8 @@ modules/
 
 ## Module files
 
+Standard NixOS modules:
+
 ```nix
 # modules/networking.nix
 { ... }:
@@ -54,9 +58,13 @@ modules/
 
 ## Filtering
 
+When you don't want to import everything:
+
 ```nix
 let imp = inputs.imp.withLib lib; in
 {
   imports = [ (imp.filter (lib.hasInfix "/services/") ./modules) ];
 }
 ```
+
+This imports only modules under `modules/services/`.

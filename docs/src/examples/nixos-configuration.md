@@ -1,5 +1,7 @@
 # NixOS Configuration
 
+A complete NixOS configuration using imp's registry and config trees.
+
 ```
 my-flake/
   flake.nix
@@ -46,6 +48,8 @@ my-flake/
 
 ## nix/flake/default.nix
 
+The flake-parts entry point with imp configured:
+
 ```nix
 inputs:
 flake-parts.lib.mkFlake { inherit inputs; } {
@@ -59,6 +63,8 @@ flake-parts.lib.mkFlake { inherit inputs; } {
 ```
 
 ## nix/outputs/nixosConfigurations/server.nix
+
+The flake output that builds the system. It pulls modules from the registry by name:
 
 ```nix
 { lib, inputs, imp, registry, ... }:
@@ -74,6 +80,8 @@ lib.nixosSystem {
 ```
 
 ## nix/registry/hosts/server/default.nix
+
+The host definition. It imports its hardware config and uses a config tree for system settings:
 
 ```nix
 { inputs, imp, registry, ... }:
@@ -93,6 +101,8 @@ lib.nixosSystem {
 
 ## nix/registry/hosts/server/config/networking.nix
 
+Config tree files are minimal, just the option values:
+
 ```nix
 {
   hostName = "server";
@@ -101,6 +111,8 @@ lib.nixosSystem {
 ```
 
 ## nix/registry/modules/nixos/base.nix
+
+Shared module for all hosts:
 
 ```nix
 { pkgs, ... }:

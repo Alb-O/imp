@@ -1,8 +1,25 @@
 # Imp 😈
 
-A Nix library for organizing flakes with directory-based imports, named module registries, and automatic input collection.
+Nix flakes require explicit imports. Add a module, update the imports list. Reorganize your directory structure, fix every relative path. Imp removes this busywork: point it at a directory and it imports everything inside, automatically inferring and mapping filesystem paths to attribute names.
 
-Primarily inspired by @vic's [Dendritic pattern (and related projects)](https://dendrix.oeiuwq.com/Dendritic.html).
+```nix
+{ inputs, ... }:
+{
+  imports = [ (inputs.imp ./modules) ];
+}
+```
+
+This imp-frastructure replaces an ever-growing list of explicit imports. Add a file to `modules/`, it gets imported. Remove it, it's no longer imported. No filepath bookkeeping.
+
+## Beyond just imp-orts 😈
+
+Directory-based imports are the foundation, but Imp builds three more things on top:
+
+**Registries** give modules names instead of paths. Instead of `../../../modules/nixos/base.nix`, you write `registry.modules.nixos.base`. Rename a directory and the migration tool scans your codebase for broken `registry.X.Y` references, matches them to new paths by leaf name, and generates ast-grep commands to rewrite them.
+
+**Config trees** map directory structure to NixOS option paths. The file `programs/git.nix` sets `programs.git`. Your directory layout becomes a visual index of what's configured.
+
+**Input collection** scatters flake inputs next to the code that uses them. A formatter module declares its `treefmt-nix` dependency inline; imp collects these and regenerates `flake.nix`.
 
 ## Installation
 
@@ -13,62 +30,48 @@ Primarily inspired by @vic's [Dendritic pattern (and related projects)](https://
 }
 ```
 
-## Quick Start
+## Quick start
 
-As a module importer:
-
-```nix
-{ inputs, ... }:
-{
-  imports = [ (inputs.imp ./nix) ];
-}
-```
-
-With flake-parts:
+With flake-parts (recommended):
 
 ```nix
 {
   outputs = inputs@{ flake-parts, imp, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ imp.flakeModules.default ];
-
       systems = [ "x86_64-linux" "aarch64-linux" ];
-
       imp = {
         src = ./outputs;
-        args = { inherit inputs; };
+        registry.src = ./registry;
       };
     };
 }
 ```
 
-As a tree builder:
+Standalone:
 
 ```nix
-imp.treeWith lib import ./outputs
-# { apps = <...>; packages = { foo = <...>; }; }
+imp.treeWith lib (f: f { inherit pkgs; }) ./outputs
+# { packages.hello = <derivation>; apps.run = <derivation>; }
 ```
 
 ## Documentation
 
-Full documentation, examples, and API reference, [click here](https://imp-nix.github.io/imp.lib).
+[Full docs](https://imp-nix.github.io/imp.lib)
 
 ## Development
 
 ```sh
-nix run .#tests    # Run unit tests
-nix flake check    # Full check
-nix fmt            # Format with treefmt
-nix run .#docs     # Serve documentation locally
+nix run .#tests
+nix flake check
+nix fmt
+nix run .#docs
 ```
 
 ## Attribution
 
-- Import features originally from @vic's [import-tree](https://github.com/vic/import-tree)
-- `.collectInputs` inspired by @vic's [flake-file](https://github.com/vic/flake-file)
-- `.registry` inspired by @vic's [flake-aspects](https://github.com/vic/flake-aspects)
-- `.tree` inspired by [flakelight](https://github.com/nix-community/flakelight)'s autoloading
+Built on ideas from @vic's [dendritic](https://dendrix.oeiuwq.com/Dendritic.html) pattern, [import-tree](https://github.com/vic/import-tree), [flake-file](https://github.com/vic/flake-file), and [flake-aspects](https://github.com/vic/flake-aspects). Tree building inspired by [flakelight](https://github.com/nix-community/flakelight).
 
 ## License
 
-Apache-2.0 - see [LICENSE](LICENSE).
+[Apache-2.0](LICENSE)

@@ -1,5 +1,7 @@
 # Using with flake-parts
 
+The flake-parts module turns your directory structure into flake outputs. Point it at an outputs directory and files become attributes.
+
 ```nix
 {
   inputs = {
@@ -14,7 +16,7 @@
       systems = [ "x86_64-linux" "aarch64-linux" ];
       imp = {
         src = ./outputs;
-        args = { inherit inputs; };
+        registry.src = ./registry;  # optional
       };
     };
 }
@@ -32,6 +34,8 @@ outputs/
   overlays.nix        # flake.overlays
 ```
 
+Files in `perSystem/` are evaluated once per system in your `systems` list. They receive `pkgs` instantiated for that system, along with `system`, `self'`, and `inputs'` (the per-system projections).
+
 ## perSystem files
 
 ```nix
@@ -39,10 +43,15 @@ outputs/
 { pkgs, lib, system, self, self', inputs, inputs', ... }:
 {
   hello = pkgs.hello;
+  myTool = pkgs.callPackage ./my-tool.nix {};
 }
 ```
 
-## Non-perSystem files
+These are the standard flake-parts arguments. If you've set `imp.registry.src`, files also receive `imp` and `registry`.
+
+## Flake-level files
+
+Files outside `perSystem/` receive a simpler set of arguments:
 
 ```nix
 # outputs/nixosConfigurations/server.nix
@@ -54,7 +63,7 @@ lib.nixosSystem {
 }
 ```
 
-## With registry
+## Adding a registry
 
 ```nix
 imp = {
@@ -63,14 +72,22 @@ imp = {
 };
 ```
 
+Now every file receives `registry`, and you can reference modules by name rather than path.
+
 ## Multiple directories
+
+imp merges with anything else in your flake-parts config:
 
 ```nix
 {
   imports = [ imp.flakeModules.default ];
   imp.src = ./outputs;
-  imports = [ (import ./extra-outputs { inherit inputs; }) ];
+
+  # Additional outputs defined directly
+  perSystem = { pkgs, ... }: {
+    packages.extra = pkgs.hello;
+  };
 }
 ```
 
-Imp-loaded outputs merge with manual definitions.
+Manual definitions override imp-loaded ones when both define the same attribute.

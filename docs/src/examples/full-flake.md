@@ -1,5 +1,7 @@
 # Full Flake Structure
 
+Everything together: flake-parts integration, registry, config trees, and input collection.
+
 ```
 my-flake/
   flake.nix                     # Auto-generated
@@ -39,6 +41,8 @@ my-flake/
 
 ## flake.nix (auto-generated)
 
+Don't edit this directly. It's regenerated from `__inputs` declarations:
+
 ```nix
 {
   inputs = {
@@ -55,6 +59,8 @@ my-flake/
 ```
 
 ## nix/flake/default.nix
+
+The real entry point:
 
 ```nix
 inputs:
@@ -75,6 +81,8 @@ flake-parts.lib.mkFlake { inherit inputs; } {
 ```
 
 ## nix/outputs/perSystem/formatter.nix
+
+Input declared inline, next to the code using it:
 
 ```nix
 {

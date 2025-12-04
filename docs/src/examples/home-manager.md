@@ -1,5 +1,7 @@
 # Home Manager
 
+Home Manager configurations using registry references and config tree composition.
+
 ```
 registry/
   users/
@@ -22,9 +24,12 @@ registry/
             neovim.nix
 ```
 
-## registry/users/alice/default.nix
+## User configuration
+
+The user definition imports feature modules from the registry and adds personal settings from a local config tree:
 
 ```nix
+# registry/users/alice/default.nix
 { imp, registry, ... }:
 {
   imports = [
@@ -39,9 +44,12 @@ registry/
 }
 ```
 
-## registry/users/alice/programs/git.nix
+## Personal overrides
+
+Files in the user's directory add to or replace values from feature modules. The NixOS module system merges definitions according to each option's type: lists concatenate, attrsets merge recursively, and singular values take the last definition.
 
 ```nix
+# registry/users/alice/programs/git.nix
 {
   enable = true;
   userName = "Alice Smith";
@@ -51,9 +59,8 @@ registry/
 }
 ```
 
-## registry/users/alice/programs/zsh.nix
-
 ```nix
+# registry/users/alice/programs/zsh.nix
 { lib, ... }:
 {
   shellAliases.projects = "cd ~/projects";
@@ -63,18 +70,20 @@ registry/
 }
 ```
 
-## registry/modules/home/features/shell/default.nix
+## Feature modules
+
+Each feature is a config tree that can be imported independently:
 
 ```nix
+# registry/modules/home/features/shell/default.nix
 { imp, ... }:
 {
   imports = [ (imp.configTree ./.) ];
 }
 ```
 
-## registry/modules/home/features/shell/programs/zsh.nix
-
 ```nix
+# registry/modules/home/features/shell/programs/zsh.nix
 {
   enable = true;
   enableCompletion = true;
@@ -85,7 +94,9 @@ registry/
 }
 ```
 
-## With mergeConfigTrees
+## Using mergeConfigTrees
+
+When features share files at the same paths (both shell and devTools have `programs/zsh.nix`), use `mergeConfigTrees` to compose them properly:
 
 ```nix
 { imp, registry, ... }:
@@ -103,9 +114,10 @@ registry/
 }
 ```
 
-## outputs/homeConfigurations/alice@workstation.nix
+## Flake output
 
 ```nix
+# outputs/homeConfigurations/alice@workstation.nix
 { inputs, nixpkgs, imp, registry, ... }:
 inputs.home-manager.lib.homeManagerConfiguration {
   pkgs = nixpkgs.legacyPackages.x86_64-linux;

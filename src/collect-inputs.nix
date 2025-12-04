@@ -117,11 +117,7 @@ let
           entryPath = path + "/${name}";
           entryType = entries.${name};
           # For symlinks, resolve the target type
-          resolvedType =
-            if entryType == "symlink" then
-              builtins.readFileType entryPath
-            else
-              entryType;
+          resolvedType = if entryType == "symlink" then builtins.readFileType entryPath else entryType;
         in
         if isExcluded entryPath then
           acc
@@ -151,11 +147,7 @@ let
     let
       rawPathType = builtins.readFileType path;
       # Resolve symlinks to their target type
-      pathType =
-        if rawPathType == "symlink" then
-          builtins.readFileType path
-        else
-          rawPathType;
+      pathType = if rawPathType == "symlink" then builtins.readFileType path else rawPathType;
       initial = {
         inputs = { };
         conflicts = [ ];

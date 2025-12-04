@@ -1,6 +1,8 @@
 # Collect Inputs
 
-Declare inputs inline where used:
+Flake inputs accumulate at the top of `flake.nix`, divorced from the code that uses them. A formatter needs `treefmt-nix`; that fact is visible only if you read both the inputs block and the formatter definition and connect the dots.
+
+Input collection inverts this. Declare inputs next to the code that uses them:
 
 ```nix
 # outputs/perSystem/formatter.nix
@@ -15,7 +17,7 @@ Declare inputs inline where used:
 }
 ```
 
-Imp collects all `__inputs` and generates/updates `flake.nix`.
+imp scans your codebase for `__inputs` declarations and regenerates `flake.nix` with all of them collected.
 
 ## Setup
 
@@ -30,17 +32,19 @@ imp = {
 };
 ```
 
-Core inputs (nixpkgs, flake-parts, etc.) go in `inputs.nix`. Single-use inputs use `__inputs`.
+Core inputs (nixpkgs, flake-parts, imp itself) stay in `inputs.nix` where they belong. Single-use dependencies go in `__inputs` in the same file that references them.
 
-## Regenerate flake.nix
+## Regenerating flake.nix
 
 ```sh
 nix run .#imp-flake
 ```
 
+Run this after adding or modifying `__inputs` declarations.
+
 ## File format
 
-Files with `__inputs` must use `__functor`:
+Files using `__inputs` must be attrsets with `__functor`. When imp processes the file, it extracts `__inputs` for the generated `flake.nix` and calls `__functor` to get the actual output value:
 
 ```nix
 {
@@ -56,4 +60,4 @@ Files with `__inputs` must use `__functor`:
 
 ## Conflicts
 
-Same input with different URLs across files causes an error. Move shared inputs to `coreInputs`.
+If two files declare the same input with different URLs, imp errors. Move the shared input to `coreInputs` instead.

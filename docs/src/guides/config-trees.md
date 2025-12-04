@@ -1,6 +1,8 @@
 # Config Trees
 
-Map directory structure to option paths:
+Most NixOS configurations eventually collapse into a single file. Services, programs, users, networking, all jammed into `configuration.nix` until you're scrolling past 400 lines to find where you enabled SSH.
+
+Config trees invert this. The file path _is_ the option path: `programs/git.nix` sets `programs.git`. That's it.
 
 ```
 home/
@@ -21,6 +23,8 @@ Each file returns just that option's value:
 }
 ```
 
+Want to know if git is configured? Check if `programs/git.nix` exists. The directory becomes a table of contents.
+
 ## Usage
 
 ```nix
@@ -30,7 +34,7 @@ Each file returns just that option's value:
 }
 ```
 
-With registry:
+With registry (when using the flake-parts module):
 
 ```nix
 { imp, ... }:
@@ -41,6 +45,8 @@ With registry:
 
 ## Files can be functions
 
+When you need access to module arguments like `pkgs` or `config`:
+
 ```nix
 # programs/git.nix
 { pkgs, ... }:
@@ -50,66 +56,56 @@ With registry:
 }
 ```
 
+Config tree files receive standard module arguments (`config`, `lib`, `pkgs`, etc.) plus any extras you pass.
+
 ## Extra arguments
 
 ```nix
-imp.configTreeWith { myVar = "value"; } ./config
+imp.configTreeWith { secrets = ./secrets; } ./config
 ```
+
+Files then receive `secrets` alongside standard module args.
 
 ## Building attribute trees
 
-For non-module uses (e.g. packages or apps), use `.tree` or `.treeWith`:
+Config trees are for NixOS/Home Manager modules. For non-module uses (packages, apps, arbitrary attrsets), use `.tree` or `.treeWith`:
 
 ```nix
-# A tree of packages
-let
-  packages = (imp.withLib lib).tree ./packages;
-in
+let packages = (imp.withLib lib).tree ./packages; in
 packages.hello  # -> imported from ./packages/hello.nix
 ```
 
-### Using treeWith for transformation
-
-When each file exports a function that needs arguments:
+When files export functions needing arguments:
 
 ```nix
 # packages/hello.nix
-{ pkgs }:
-pkgs.hello
+{ pkgs }: pkgs.hello
 
 # Build with treeWith
 imp.treeWith lib (f: f { inherit pkgs; }) ./packages
 # => { hello = <derivation>; }
 ```
 
-### Common treeWith patterns
+## Transformation patterns
 
-Calling functions with arguments:
+The second argument to `treeWith` is applied to every imported value. Common uses:
 
 ```nix
-# Each file gets: { pkgs, lib }: { ... }
+# Call each file with arguments
 imp.treeWith lib (f: f { inherit pkgs lib; }) ./outputs
-```
 
-Adding metadata to all derivations:
-
-```nix
+# Add metadata to all derivations
 imp.treeWith lib (drv: drv // { meta.priority = 5; }) ./packages
-```
 
-Wrap each module with common options:
-
-```nix
+# Wrap each module with common imports
 imp.treeWith lib (mod: { imports = [ mod commonModule ]; }) ./modules
 ```
-
-### Chaining with mapTree
 
 For multiple transformations, chain `.mapTree`:
 
 ```nix
 (imp.withLib lib)
-  .mapTree (f: f { inherit pkgs; })  # Call with args
+  .mapTree (f: f { inherit pkgs; })
   .mapTree (drv: drv.overrideAttrs (old: { meta.license = lib.licenses.mit; }))
   .tree ./packages
 ```

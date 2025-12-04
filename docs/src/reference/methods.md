@@ -588,6 +588,32 @@ Features: hover highlighting, cluster coloring, animated dashed directional edge
 graph
 : Graph with nodes and edges from analyze functions.
 
+## `imp.toHtmlWith` {#imp.toHtmlWith}
+
+Generate interactive HTML visualization with custom colors.
+
+Features: hover highlighting, cluster coloring, animated dashed directional edges, auto-fix on drag.
+
+### Arguments
+
+graph
+: Graph with nodes and edges from analyze functions.
+
+colors (optional)
+: Custom cluster colors attrset. Merged with defaults.
+
+### Example
+
+```nix
+toHtmlWith {
+  inherit graph;
+  colors = {
+    "modules.custom" = "#ff5722";
+    "outputs.packages" = "#009688";
+  };
+}
+```
+
 ## `imp.toJson` {#imp.toJson}
 
 Convert graph to a JSON-serializable structure with full paths.
@@ -665,38 +691,36 @@ oldPath
 
 ## `imp.detectRenames` {#imp.detectRenames}
 
-Detect renames by scanning files and comparing against registry.
-
-Returns an attrset containing:
-
-- brokenRefs: list of broken registry references found
-- suggestions: attrset mapping old paths to suggested new paths
-- affectedFiles: list of files that need updating
-- commands: list of ast-grep commands to run
-- script: shell script to run all migrations
-
-### Example
+Scans `.nix` files for `registry.X.Y` patterns, identifies references that don't exist in the current registry, and generates ast-grep commands to rewrite them.
 
 ```nix
-detectRenames {
+result = imp.detectRenames {
   registry = myRegistry;
   paths = [ ./nix/outputs ./nix/flake ];
-}
+};
+
+result.brokenRefs    # [ "home.alice" "modules.old" ]
+result.suggestions   # { "home.alice" = "users.alice"; }
+result.affectedFiles # [ "outputs/nixosConfigurations/server.nix" ]
+result.commands      # [ "ast-grep --lang nix --pattern 'registry.home.alice' ..." ]
+result.script        # Shell script that runs all commands
 ```
+
+For each broken reference, the function looks for a valid path with the same leaf name. `home.alice` matches `users.alice` because both end in `alice`. When multiple paths share the same leaf, no suggestion is made (ambiguous).
 
 ### Arguments
 
 registry
-: The current registry attrset to check against.
+: The current registry attrset. Each extracted reference is checked against this via recursive attribute lookup.
 
 paths
-: List of paths to scan for registry references.
+: Directories to scan. All `.nix` files are read recursively (excluding `_`-prefixed directories).
 
 astGrep
-: Path to the ast-grep binary (default: "ast-grep").
+: Path to ast-grep binary. Default: `"ast-grep"`.
 
 registryName
-: The attribute name used for the registry (default: "registry").
+: Attribute name to match. Default: `"registry"`. If you use `cfg` instead of `registry`, set this to `"cfg"`.
 
 ## Standalone Utilities
 
