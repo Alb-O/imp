@@ -11,132 +11,8 @@
 let
   visualizeLib = import ../../src/visualize.nix { inherit lib; };
 
-  # Use forked nixdoc with let-in identifier resolution and options rendering
-  nixdocBin = nixdoc.packages.${pkgs.system}.default;
-
-  # mdformat with plugins (same as formatter.nix)
-  mdformat = pkgs.mdformat.withPlugins (
-    ps: with ps; [
-      mdformat-gfm
-      mdformat-frontmatter
-      mdformat-footnote
-    ]
-  );
-
-  # Use shared options schema for documentation generation
-  optionsSchema = import ../../src/options-schema.nix { inherit lib; };
-
-  # Evaluate module to get properly structured options
-  evaluatedModule = lib.evalModules {
-    modules = [ optionsSchema ];
-  };
-
-  # Extract options to JSON
-  rawOpts = lib.optionAttrSetToDocList evaluatedModule.options;
-  filteredOpts = lib.filter (
-    opt: (opt.visible or true) && !(opt.internal or false) && lib.hasPrefix "imp." opt.name
-  ) rawOpts;
-  optionsNix = builtins.listToAttrs (
-    map (o: {
-      name = o.name;
-      value = removeAttrs o [
-        "name"
-        "visible"
-        "internal"
-      ];
-    }) filteredOpts
-  );
-  optionsJson = builtins.toJSON optionsNix;
-
-  # Write options JSON to a file for the shell scripts
-  optionsJsonFile = pkgs.writeText "imp-options.json" optionsJson;
-
-  # Script to generate API reference (uses nixdoc for both methods and options)
-  generateApiRef = pkgs.writeShellScript "generate-api-ref" ''
-    set -e
-    SITE_DIR="$1"
-    SRC_DIR="$2"
-    README_FILE="$3"
-    OPTIONS_JSON="$4"
-
-    # Copy README.md to site/src for Introduction page
-    cp "$README_FILE" "$SITE_DIR/src/README.md"
-
-    {
-      echo "# API Methods"
-      echo ""
-      echo "<!-- Auto-generated from src/*.nix - do not edit -->"
-      echo ""
-      ${lib.getExe' nixdocBin "nixdoc"} \
-        --file "$SRC_DIR/api.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix ""
-
-      echo ""
-      echo "## Registry"
-      echo ""
-      ${lib.getExe' nixdocBin "nixdoc"} \
-        --file "$SRC_DIR/registry.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix ""
-
-      echo ""
-      echo "## Format Flake"
-      echo ""
-      ${lib.getExe' nixdocBin "nixdoc"} \
-        --file "$SRC_DIR/format-flake.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix ""
-
-      echo ""
-      echo "## Analyze"
-      echo ""
-      ${lib.getExe' nixdocBin "nixdoc"} \
-        --file "$SRC_DIR/analyze.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix ""
-
-      echo ""
-      echo "## Visualize"
-      echo ""
-      ${lib.getExe' nixdocBin "nixdoc"} \
-        --file "$SRC_DIR/visualize.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix ""
-
-      echo ""
-      echo "## Standalone Utilities"
-      echo ""
-      ${lib.getExe' nixdocBin "nixdoc"} \
-        --file "$SRC_DIR/default.nix" \
-        --category "" \
-        --description "" \
-        --prefix "imp" \
-        --anchor-prefix "" \
-        --export collectInputs,collectAndFormatFlake
-    } > "$SITE_DIR/src/reference/methods.md"
-
-    # Generate options using nixdoc options command
-    ${lib.getExe' nixdocBin "nixdoc"} options \
-      --file "$OPTIONS_JSON" \
-      --title "Module Options" \
-      --anchor-prefix "opt-" \
-      > "$SITE_DIR/src/reference/options.md"
-
-    # Format the generated markdown
-    ${lib.getExe mdformat} "$SITE_DIR/src/reference/methods.md"
-    ${lib.getExe mdformat} "$SITE_DIR/src/reference/options.md"
-  '';
+  # Import shared docgen utilities
+  docgen = import ./_docgen.nix { inherit pkgs lib nixdoc; };
 in
 {
   tests = {
@@ -187,7 +63,9 @@ in
         fi
 
         echo "Generating API reference from src/*.nix..."
-        ${generateApiRef} ./site ./src ./README.md ${optionsJsonFile}
+        mkdir -p ./site/src/reference
+        ${docgen.generateDocsScript} ./src ./site/src/reference ${docgen.optionsJsonFile}
+        cp ./README.md ./site/src/README.md
 
         echo "Starting mdbook server..."
         ${pkgs.mdbook}/bin/mdbook serve ./site &
@@ -210,7 +88,9 @@ in
         fi
 
         echo "Generating API reference from src/*.nix..."
-        ${generateApiRef} ./site ./src ./README.md ${optionsJsonFile}
+        mkdir -p ./site/src/reference
+        ${docgen.generateDocsScript} ./src ./site/src/reference ${docgen.optionsJsonFile}
+        cp ./README.md ./site/src/README.md
 
         ${pkgs.mdbook}/bin/mdbook build ./site
         echo "Documentation built './site/book' directory."

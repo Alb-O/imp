@@ -1,40 +1,52 @@
-/*
+/**
   Builds nested attrset from directory structure.
 
   Naming:  foo.nix | foo/default.nix -> { foo = ... }
            foo_.nix                  -> { foo = ... }  (escapes reserved names)
            _foo.nix | _foo/          -> ignored
 
-  Example:
+  # Example
 
-    Directory structure:
-      outputs/
-        apps.nix
-        checks.nix
-        packages/
-          foo.nix
-          bar.nix
+  Directory structure:
 
-    imp.treeWith lib import ./outputs
+  ```
+  outputs/
+    apps.nix
+    checks.nix
+    packages/
+      foo.nix
+      bar.nix
+  ```
 
-    Returns:
-      {
-        apps = <imported from apps.nix>;
-        checks = <imported from checks.nix>;
-        packages = {
-          foo = <imported from foo.nix>;
-          bar = <imported from bar.nix>;
-        };
-      }
+  ```nix
+  imp.treeWith lib import ./outputs
+  ```
 
-  Usage:
+  Returns:
 
-    (imp.withLib lib).tree ./outputs
+  ```nix
+  {
+    apps = <imported from apps.nix>;
+    checks = <imported from checks.nix>;
+    packages = {
+      foo = <imported from foo.nix>;
+      bar = <imported from bar.nix>;
+    };
+  }
+  ```
+
+  # Usage
+
+  ```nix
+  (imp.withLib lib).tree ./outputs
+  ```
 
   Or with transform:
 
-    ((imp.withLib lib).mapTree (f: f args)).tree ./outputs
-    imp.treeWith lib (f: f args) ./outputs
+  ```nix
+  ((imp.withLib lib).mapTree (f: f args)).tree ./outputs
+  imp.treeWith lib (f: f args) ./outputs
+  ```
 */
 {
   lib,

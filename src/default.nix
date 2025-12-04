@@ -1,3 +1,12 @@
+/**
+  Entry point for imp - directory-based Nix imports.
+
+  This module exports the main imp API including:
+  - Chainable filtering and transformation methods
+  - Tree building from directory structure
+  - Registry for named module discovery
+  - Utilities for flake input collection
+*/
 let
   utils = import ./lib.nix;
   perform = import ./collect.nix;

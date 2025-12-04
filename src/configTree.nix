@@ -1,43 +1,56 @@
-/*
+/**
   Builds a NixOS/Home Manager module where directory structure = option paths.
 
   Each file receives module args ({ config, lib, pkgs, ... }) plus extraArgs,
   and returns config values. The path becomes the option path:
 
-    programs/git.nix          -> { programs.git = <result>; }
-    services/nginx/default.nix -> { services.nginx = <result>; }
+  - `programs/git.nix` -> `{ programs.git = <result>; }`
+  - `services/nginx/default.nix` -> `{ services.nginx = <result>; }`
 
-  Example directory structure:
+  # Example
 
-    home/
-      programs/
-        git.nix
-        zsh.nix
-      services/
-        syncthing.nix
+  Directory structure:
+
+  ```
+  home/
+    programs/
+      git.nix
+      zsh.nix
+    services/
+      syncthing.nix
+  ```
 
   Example file (home/programs/git.nix):
 
-    { pkgs, ... }: {
-      enable = true;
-      userName = "Alice";
-    }
+  ```nix
+  { pkgs, ... }: {
+    enable = true;
+    userName = "Alice";
+  }
+  ```
 
-  Usage:
+  # Usage
 
-    { inputs, ... }:
-    {
-      imports = [ ((inputs.imp.withLib lib).configTree ./home) ];
-    }
+  ```nix
+  { inputs, ... }:
+  {
+    imports = [ ((inputs.imp.withLib lib).configTree ./home) ];
+  }
+  ```
 
-    Equivalent to manually writing:
-      programs.git = { enable = true; userName = "Alice"; };
-      programs.zsh = { ... };
-      services.syncthing = { ... };
+  Equivalent to manually writing:
+
+  ```nix
+  programs.git = { enable = true; userName = "Alice"; };
+  programs.zsh = { ... };
+  services.syncthing = { ... };
+  ```
 
   With extra args:
 
-    ((inputs.imp.withLib lib).configTreeWith { myArg = "value"; } ./home)
+  ```nix
+  ((inputs.imp.withLib lib).configTreeWith { myArg = "value"; } ./home)
+  ```
 */
 {
   lib,

@@ -1,37 +1,50 @@
-/*
+/**
   Merges multiple config trees into a single NixOS/Home Manager module.
 
   Supports two merge strategies:
-    - "override" (default): Later trees override earlier (lib.recursiveUpdate)
-    - "merge": Use module system's mkMerge for proper option merging
+
+  - "override" (default): Later trees override earlier (lib.recursiveUpdate)
+  - "merge": Use module system's mkMerge for proper option merging
 
   This enables composable features where one extends another:
 
-    features/
-      shell/programs/{zsh,starship}.nix    # base shell config
-      devShell/programs/{git,zsh}.nix      # extends shell, overrides zsh
+  ```
+  features/
+    shell/programs/{zsh,starship}.nix    # base shell config
+    devShell/programs/{git,zsh}.nix      # extends shell, overrides zsh
+  ```
 
-    # devShell/default.nix - override strategy (default)
-    { imp, ... }:
-    {
-      imports = [
-        (imp.mergeConfigTrees [ ../shell ./. ])
-      ];
-    }
+  # Usage
 
-    # Or with merge strategy for concatenating list options:
-    { imp, ... }:
-    {
-      imports = [
-        (imp.mergeConfigTrees { strategy = "merge"; } [ ../shell ./. ])
-      ];
-    }
+  Override strategy (default):
 
-  With "override": later values completely replace earlier ones
-  With "merge": options combine according to module system rules
-    - lists concatenate
-    - strings may error (use mkForce/mkDefault to control)
-    - nested attrs merge recursively
+  ```nix
+  # devShell/default.nix
+  { imp, ... }:
+  {
+    imports = [
+      (imp.mergeConfigTrees [ ../shell ./. ])
+    ];
+  }
+  ```
+
+  Or with merge strategy for concatenating list options:
+
+  ```nix
+  { imp, ... }:
+  {
+    imports = [
+      (imp.mergeConfigTrees { strategy = "merge"; } [ ../shell ./. ])
+    ];
+  }
+  ```
+
+  With "override": later values completely replace earlier ones.
+  With "merge": options combine according to module system rules:
+
+  - lists concatenate
+  - strings may error (use mkForce/mkDefault to control)
+  - nested attrs merge recursively
 */
 {
   lib,

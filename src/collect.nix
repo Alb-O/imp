@@ -1,4 +1,4 @@
-/*
+/**
   File collection and filtering logic.
 
   This module handles:
@@ -20,7 +20,7 @@ let
     ;
 in
 
-/*
+/**
   Core evaluation: applies filters/maps and produces the final result.
 
   When pipef is null, returns a NixOS module.

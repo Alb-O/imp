@@ -1,20 +1,24 @@
-/*
+/**
   Registry migration: detect renames and generate ast-grep commands to update references.
 
   When directories are renamed, registry paths change. This module:
+
   1. Scans files for registry.X.Y patterns
   2. Compares against current registry to find broken references
   3. Suggests mappings from old names to new names
   4. Generates ast-grep commands to fix all references
 
-  Usage:
-    migrate = import ./migrate.nix { inherit lib; };
+  # Usage
 
-    # Get migration commands
-    migrate.detectRenames {
-      registry = currentRegistry;
-      files = [ ./nix/outputs ./nix/flake ];
-    }
+  ```nix
+  migrate = import ./migrate.nix { inherit lib; };
+
+  # Get migration commands
+  migrate.detectRenames {
+    registry = currentRegistry;
+    files = [ ./nix/outputs ./nix/flake ];
+  }
+  ```
 */
 { lib }:
 let
@@ -34,11 +38,17 @@ let
     readDir
     ;
 
-  /*
+  /**
     Extract all registry.X.Y.Z references from a file's content.
     Returns list of dotted paths like [ "home.alice" "modules.nixos" ]
 
-    The `name` parameter is the registry attribute name to search for.
+    # Arguments
+
+    name
+    : The registry attribute name to search for (e.g., "registry").
+
+    content
+    : String content of the file to search.
   */
   extractRegistryRefs =
     name: content:
@@ -128,9 +138,17 @@ let
     in
     lookup registry parts;
 
-  /*
+  /**
     Find the best matching new path for an old path.
     Uses simple heuristics: matching leaf name, similar structure.
+
+    # Arguments
+
+    validPaths
+    : List of currently valid registry paths.
+
+    oldPath
+    : The broken path to find a replacement for.
   */
   suggestNewPath =
     validPaths: oldPath:
@@ -146,16 +164,38 @@ let
     in
     if builtins.length candidates == 1 then builtins.head candidates else null;
 
-  /*
+  /**
     Detect renames by scanning files and comparing against registry.
-    Returns: {
-      brokenRefs = [ { file = ...; ref = "home.alice"; } ... ];
-      suggestions = { "home.alice" = "users.alice"; ... };
-      commands = [ "ast-grep ..." ... ];
-    }
 
-    The `astGrep` parameter is the path to the ast-grep binary.
-    The `registryName` parameter is the attribute name uast-grep for the registry (default: "registry").
+    Returns an attrset containing:
+    - brokenRefs: list of broken registry references found
+    - suggestions: attrset mapping old paths to suggested new paths
+    - affectedFiles: list of files that need updating
+    - commands: list of ast-grep commands to run
+    - script: shell script to run all migrations
+
+    # Example
+
+    ```nix
+    detectRenames {
+      registry = myRegistry;
+      paths = [ ./nix/outputs ./nix/flake ];
+    }
+    ```
+
+    # Arguments
+
+    registry
+    : The current registry attrset to check against.
+
+    paths
+    : List of paths to scan for registry references.
+
+    astGrep
+    : Path to the ast-grep binary (default: "ast-grep").
+
+    registryName
+    : The attribute name used for the registry (default: "registry").
   */
   detectRenames =
     {

@@ -628,6 +628,69 @@ nixpkgsFlake
 name
 : Script name (default: "imp-vis").
 
+## Migrate
+
+## `imp.extractRegistryRefs` {#imp.extractRegistryRefs}
+
+Extract all registry.X.Y.Z references from a file's content.
+Returns list of dotted paths like [ "home.alice" "modules.nixos" ]
+
+### Arguments
+
+name
+: The registry attribute name to search for (e.g., "registry").
+
+content
+: String content of the file to search.
+
+## `imp.suggestNewPath` {#imp.suggestNewPath}
+
+Find the best matching new path for an old path.
+Uses simple heuristics: matching leaf name, similar structure.
+
+### Arguments
+
+validPaths
+: List of currently valid registry paths.
+
+oldPath
+: The broken path to find a replacement for.
+
+## `imp.detectRenames` {#imp.detectRenames}
+
+Detect renames by scanning files and comparing against registry.
+
+Returns an attrset containing:
+
+- brokenRefs: list of broken registry references found
+- suggestions: attrset mapping old paths to suggested new paths
+- affectedFiles: list of files that need updating
+- commands: list of ast-grep commands to run
+- script: shell script to run all migrations
+
+### Example
+
+```nix
+detectRenames {
+  registry = myRegistry;
+  paths = [ ./nix/outputs ./nix/flake ];
+}
+```
+
+### Arguments
+
+registry
+: The current registry attrset to check against.
+
+paths
+: List of paths to scan for registry references.
+
+astGrep
+: Path to the ast-grep binary (default: "ast-grep").
+
+registryName
+: The attribute name used for the registry (default: "registry").
+
 ## Standalone Utilities
 
 ## `imp.collectInputs` {#imp.collectInputs}
