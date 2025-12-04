@@ -1,19 +1,12 @@
 /*
   Shared options schema for imp.
 
-  This module defines the options schema used by:
-  - flakeModule.nix (runtime module)
-  - Documentation generation (packages.nix, apps.nix)
-
-  The schema is defined as a function that takes lib and optional self,
-  returning a module with options. This allows it to be used both in
-  flake-parts context and in lib.evalModules for documentation.
+  This is a standard NixOS-style module defining imp.* options.
+  Used by:
+  - flakeModule.nix (imports this module)
+  - Documentation generation (evaluated standalone)
 */
-{
-  lib,
-  # Optional: only available in flake-parts context
-  self ? null,
-}:
+{ lib, ... }:
 let
   inherit (lib)
     mkOption
@@ -21,9 +14,6 @@ let
     types
     literalExpression
     ;
-
-  # Default path uses self if available, otherwise a placeholder
-  defaultFlakePath = if self != null then self + "/flake.nix" else "/path/to/flake.nix";
 in
 {
   options.imp = {
@@ -139,7 +129,8 @@ in
 
       path = mkOption {
         type = types.path;
-        default = defaultFlakePath;
+        # Placeholder default - flakeModule.nix overrides this with self + "/flake.nix"
+        default = /path/to/flake.nix;
         defaultText = literalExpression "self + \"/flake.nix\"";
         description = "Path to flake.nix file to generate/check.";
       };

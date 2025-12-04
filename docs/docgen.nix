@@ -6,12 +6,9 @@
   docgen,
 }:
 let
-  # Use shared options schema for documentation generation
-  optionsSchema = import ../src/options-schema.nix { inherit lib; };
-
   # Use docgen's helper to convert options module to JSON
   optionsJson = docgen.lib.optionsToJson {
-    optionsModule = optionsSchema;
+    optionsModule = ../src/options-schema.nix;
     prefix = "imp.";
   };
   optionsJsonFile = pkgs.writeText "imp-options.json" optionsJson;

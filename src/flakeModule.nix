@@ -38,9 +38,6 @@ let
   registryLib = import ./registry.nix { inherit lib; };
   migrateLib = import ./migrate.nix { inherit lib; };
 
-  # Shared options schema
-  optionsSchema = import ./options-schema.nix { inherit lib self; };
-
   cfg = config.imp;
 
   # Build the registry from configured sources
@@ -128,23 +125,28 @@ let
 
 in
 {
-  # Use shared options schema for imp.* options, plus perSystem-specific options
-  options = optionsSchema.options // {
-    perSystem = mkPerSystemOption (
-      { ... }:
-      {
-        options.imp = {
-          args = mkOption {
-            type = types.attrsOf types.unspecified;
-            default = { };
-            description = "Extra per-system arguments passed to imported files.";
-          };
+  # Use shared options schema for imp.* options
+  imports = [ ./options-schema.nix ];
+
+  # Add perSystem-specific options
+  options.perSystem = mkPerSystemOption (
+    { ... }:
+    {
+      options.imp = {
+        args = mkOption {
+          type = types.attrsOf types.unspecified;
+          default = { };
+          description = "Extra per-system arguments passed to imported files.";
         };
-      }
-    );
-  };
+      };
+    }
+  );
 
   config = lib.mkMerge [
+    # Override flakeFile.path default with actual self path
+    {
+      imp.flakeFile.path = lib.mkDefault (self + "/flake.nix");
+    }
     # Systems from file (if present)
     (lib.mkIf (systemsFromFile != null) {
       systems = lib.mkDefault systemsFromFile;
