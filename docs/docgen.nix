@@ -20,9 +20,7 @@ docgen.mkDocgen {
   manifest = ./manifest.nix;
   srcDir = ../src;
   siteDir = ./.;
-  extraFiles = {
-    "README.md" = ../README.md;
-  };
+  extraFiles = { };
   optionsJson = optionsJsonFile;
   anchorPrefix = "imp";
 }

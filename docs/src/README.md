@@ -15,7 +15,7 @@ This imp-frastructure replaces an ever-growing list of explicit imports. Add a f
 
 Directory-based imports are the foundation, but Imp builds three more things on top:
 
-**Registries** give modules names instead of paths. Instead of `../../../modules/nixos/base.nix`, you write `registry.modules.nixos.base`. Rename a directory and the registry updates automatically. References stay valid because they're attribute paths, not filesystem paths.
+**Registries** give modules names instead of paths. Instead of `../../../modules/nixos/base.nix`, you write `registry.modules.nixos.base`. Rename a directory and the migration tool scans your codebase for broken `registry.X.Y` references, matches them to new paths by leaf name, and generates ast-grep commands to rewrite them.
 
 **Config trees** map directory structure to NixOS option paths. The file `programs/git.nix` sets `programs.git`. Your directory layout becomes a visual index of what's configured.
 

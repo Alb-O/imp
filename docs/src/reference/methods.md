@@ -691,36 +691,38 @@ oldPath
 
 ## `imp.detectRenames` {#imp.detectRenames}
 
-Scans `.nix` files for `registry.X.Y` patterns, identifies references that don't exist in the current registry, and generates ast-grep commands to rewrite them.
+Detect renames by scanning files and comparing against registry.
+
+Returns an attrset containing:
+
+- brokenRefs: list of broken registry references found
+- suggestions: attrset mapping old paths to suggested new paths
+- affectedFiles: list of files that need updating
+- commands: list of ast-grep commands to run
+- script: shell script to run all migrations
+
+### Example
 
 ```nix
-result = imp.detectRenames {
+detectRenames {
   registry = myRegistry;
   paths = [ ./nix/outputs ./nix/flake ];
-};
-
-result.brokenRefs    # [ "home.alice" "modules.old" ]
-result.suggestions   # { "home.alice" = "users.alice"; }
-result.affectedFiles # [ "outputs/nixosConfigurations/server.nix" ]
-result.commands      # [ "ast-grep --lang nix --pattern 'registry.home.alice' ..." ]
-result.script        # Shell script that runs all commands
+}
 ```
-
-For each broken reference, the function looks for a valid path with the same leaf name. `home.alice` matches `users.alice` because both end in `alice`. When multiple paths share the same leaf, no suggestion is made (ambiguous).
 
 ### Arguments
 
 registry
-: The current registry attrset. Each extracted reference is checked against this via recursive attribute lookup.
+: The current registry attrset to check against.
 
 paths
-: Directories to scan. All `.nix` files are read recursively (excluding `_`-prefixed directories).
+: List of paths to scan for registry references.
 
 astGrep
-: Path to ast-grep binary. Default: `"ast-grep"`.
+: Path to the ast-grep binary (default: "ast-grep").
 
 registryName
-: Attribute name to match. Default: `"registry"`. If you use `cfg` instead of `registry`, set this to `"cfg"`.
+: The attribute name used for the registry (default: "registry").
 
 ## Standalone Utilities
 

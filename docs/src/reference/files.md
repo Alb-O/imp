@@ -262,23 +262,26 @@ Note: Directories are "path-like" (have \_\_path) so they work with `imp`.
 
 ### migrate.nix
 
-Detects broken registry references after directory renames and generates ast-grep rewrite commands.
+Registry migration: detect renames and generate ast-grep commands to update references.
 
-The registry attrset is derived from directory structure, so renaming `home/` to `users/` changes `registry.home.alice` to `registry.users.alice`. References in your code still point to the old path. This module finds those broken references and suggests rewrites.
+When directories are renamed, registry paths change. This module:
+
+1. Scans files for registry.X.Y patterns
+1. Compares against current registry to find broken references
+1. Suggests mappings from old names to new names
+1. Generates ast-grep commands to fix all references
+
+#### Usage
 
 ```nix
 migrate = import ./migrate.nix { inherit lib; };
 
-result = migrate.detectRenames {
+# Get migration commands
+migrate.detectRenames {
   registry = currentRegistry;
-  paths = [ ./nix/outputs ./nix/flake ];
-};
-# result.brokenRefs = [ "home.alice" "home.bob" ]
-# result.suggestions = { "home.alice" = "users.alice"; ... }
-# result.commands = [ "ast-grep --lang nix --pattern ..." ]
+  files = [ ./nix/outputs ./nix/flake ];
+}
 ```
-
-Detection works by regex-extracting `registry.X.Y.Z` patterns from each `.nix` file, then checking each path against the registry attrset. Broken paths are matched to new paths by leaf name: if `home.alice` is broken and `users.alice` exists, it suggests that mapping. Ambiguous cases (multiple matches for the same leaf) are reported without a suggestion.
 
 ### analyze.nix
 
