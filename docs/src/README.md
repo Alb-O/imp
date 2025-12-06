@@ -57,6 +57,53 @@ imp.treeWith lib (f: f { inherit pkgs; }) ./outputs
 # { packages.hello = <derivation>; apps.run = <derivation>; }
 ```
 
+## Optional features
+
+Documentation generation and dependency visualization are available as opt-in modules. Each requires its own input, keeping the core imp.lib lockfile minimal.
+
+**Documentation** with [imp.docgen](https://github.com/imp-nix/imp.docgen):
+
+```nix
+{
+  inputs.docgen.url = "github:imp-nix/imp.docgen";
+  inputs.docgen.inputs.nixpkgs.follows = "nixpkgs";
+
+  outputs = inputs@{ flake-parts, imp, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        imp.flakeModules.default
+        imp.flakeModules.docs
+      ];
+      imp.docs = {
+        manifest = ./docs/manifest.nix;
+        srcDir = ./src;
+        siteDir = ./docs;
+      };
+    };
+}
+```
+
+This adds `apps.docs` (live reload server), `apps.build-docs`, and `packages.docs`.
+
+**Visualization** with [imp.graph](https://github.com/imp-nix/imp.graph):
+
+```nix
+{
+  inputs.imp-graph.url = "github:imp-nix/imp.graph";
+  inputs.imp-graph.inputs.nixpkgs.follows = "nixpkgs";
+
+  outputs = inputs@{ flake-parts, imp, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        imp.flakeModules.default
+        imp.flakeModules.visualize
+      ];
+    };
+}
+```
+
+This adds `apps.visualize` for interactive dependency graphs. Run `nix run .#visualize` to analyze your registry.
+
 ## Documentation
 
 [Full docs](https://imp-nix.github.io/imp.lib)

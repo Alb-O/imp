@@ -74,6 +74,51 @@ imp = {
 
 Now every file receives `registry`, and you can reference modules by name rather than path.
 
+## Optional modules
+
+Beyond `flakeModules.default`, imp provides optional modules for documentation and visualization. Each requires an additional input to keep the core lockfile minimal.
+
+**Documentation** generates API reference from your Nix source files:
+
+```nix
+{
+  inputs.docgen.url = "github:imp-nix/imp.docgen";
+  inputs.docgen.inputs.nixpkgs.follows = "nixpkgs";
+
+  outputs = inputs@{ flake-parts, imp, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        imp.flakeModules.default
+        imp.flakeModules.docs
+      ];
+      imp.docs = {
+        manifest = ./docs/manifest.nix;
+        srcDir = ./src;
+        siteDir = ./docs;
+      };
+    };
+}
+```
+
+**Visualization** renders interactive dependency graphs:
+
+```nix
+{
+  inputs.imp-graph.url = "github:imp-nix/imp.graph";
+  inputs.imp-graph.inputs.nixpkgs.follows = "nixpkgs";
+
+  outputs = inputs@{ flake-parts, imp, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        imp.flakeModules.default
+        imp.flakeModules.visualize
+      ];
+    };
+}
+```
+
+See [Registry Visualization](./registry-visualization.md) for details on reading the generated graphs.
+
 ## Multiple directories
 
 imp merges with anything else in your flake-parts config:
