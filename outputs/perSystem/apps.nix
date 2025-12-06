@@ -4,15 +4,17 @@
   nix-unit,
   nixpkgs,
   docgen,
+  imp-graph,
   self,
   lib,
   ...
 }:
 let
-  visualizeLib = import ../../src/visualize { inherit lib; };
-
   # Import docgen configuration from docs/
   dg = import ../../docs/docgen.nix { inherit pkgs lib docgen; };
+
+  # WASM distribution for visualization
+  wasmDistPath = imp-graph.packages.${system}.default;
 in
 {
   tests = {
@@ -41,8 +43,8 @@ in
     type = "app";
     meta.description = "Visualize imp registry dependencies (standalone)";
     program = toString (
-      visualizeLib.mkVisualizeScript {
-        inherit pkgs;
+      imp-graph.lib.mkVisualizeScript {
+        inherit pkgs wasmDistPath;
         impSrc = self.sourceInfo or self;
         nixpkgsFlake = nixpkgs;
         name = "imp-vis";

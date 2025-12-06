@@ -1,4 +1,7 @@
-# Tests for visualize module
+# Tests for visualize module (JSON formatters only)
+#
+# NOTE: HTML visualization tests are in imp.graph.
+# This module only provides toJson and toJsonMinimal which don't require WASM.
 { lib, imp, ... }:
 let
   visualize = import ../src/visualize { inherit lib; };
@@ -164,127 +167,6 @@ in
     expected = false;
   };
 
-  # toHtml tests
-  toHtml."test produces valid HTML output" = {
-    expr =
-      let
-        html = visualize.toHtml sampleGraph;
-        trimmed = lib.trim html;
-      in
-      lib.hasPrefix "<!doctype html>" (lib.toLower trimmed);
-    expected = true;
-  };
-
-  toHtml."test contains graph data placeholder replacement" = {
-    expr =
-      let
-        html = visualize.toHtml sampleGraph;
-      in
-      # Should NOT contain the placeholder after replacement
-      !(lib.hasInfix "/*GRAPH_DATA*/" html);
-    expected = true;
-  };
-
-  toHtml."test contains cluster colors placeholder replacement" = {
-    expr =
-      let
-        html = visualize.toHtml sampleGraph;
-      in
-      # Should NOT contain the placeholder after replacement
-      !(lib.hasInfix "/*CLUSTER_COLORS*/" html);
-    expected = true;
-  };
-
-  toHtml."test contains force-graph script reference" = {
-    expr =
-      let
-        html = visualize.toHtml sampleGraph;
-      in
-      lib.hasInfix "force-graph" html;
-    expected = true;
-  };
-
-  toHtml."test handles empty graph" = {
-    expr =
-      let
-        emptyGraph = {
-          nodes = [ ];
-          edges = [ ];
-        };
-        html = visualize.toHtml emptyGraph;
-        trimmed = lib.trim html;
-      in
-      lib.hasPrefix "<!doctype html>" (lib.toLower trimmed);
-    expected = true;
-  };
-
-  toHtml."test merges nodes with same signature" = {
-    expr =
-      let
-        # Two nodes with same cluster and connections should merge
-        duplicateGraph = {
-          nodes = [
-            {
-              id = "modules.home.foo";
-              path = /test/foo;
-              type = "file";
-            }
-            {
-              id = "modules.home.bar";
-              path = /test/bar;
-              type = "file";
-            }
-            {
-              id = "outputs.target";
-              path = /test/target;
-              type = "output";
-            }
-          ];
-          edges = [
-            {
-              from = "modules.home.foo";
-              to = "outputs.target";
-              type = "import";
-            }
-            {
-              from = "modules.home.bar";
-              to = "outputs.target";
-              type = "import";
-            }
-          ];
-        };
-        html = visualize.toHtml duplicateGraph;
-      in
-      # Just verify it produces valid HTML (merging is internal optimization)
-      lib.hasPrefix "<!doctype html>" (lib.toLower (lib.trim html));
-    expected = true;
-  };
-
-  # clusterColors tests
-  clusterColors."test contains expected cluster keys" = {
-    expr = visualize.clusterColors ? "modules.home";
-    expected = true;
-  };
-
-  clusterColors."test contains nixos modules color" = {
-    expr = visualize.clusterColors ? "modules.nixos";
-    expected = true;
-  };
-
-  clusterColors."test contains outputs color" = {
-    expr = visualize.clusterColors ? "outputs.nixosConfigurations";
-    expected = true;
-  };
-
-  clusterColors."test colors are valid hex strings" = {
-    expr =
-      let
-        homeColor = visualize.clusterColors."modules.home";
-      in
-      lib.hasPrefix "#" homeColor && builtins.stringLength homeColor == 7;
-    expected = true;
-  };
-
   # Integration with analyze module
   integration."test toJson works with analyzeRegistry output" = {
     expr =
@@ -303,63 +185,6 @@ in
         json = visualize.toJsonMinimal graph;
       in
       builtins.isAttrs json && json ? nodes && json ? edges;
-    expected = true;
-  };
-
-  integration."test toHtml works with analyzeRegistry output" = {
-    expr =
-      let
-        graph = analyze.analyzeRegistry { registry = testRegistry; };
-        html = visualize.toHtml graph;
-        trimmed = lib.trim html;
-      in
-      lib.hasPrefix "<!doctype html>" (lib.toLower trimmed);
-    expected = true;
-  };
-
-  # Edge case tests
-  edgeCases."test handles nodes with dots in names" = {
-    expr =
-      let
-        dottedGraph = {
-          nodes = [
-            {
-              id = "a.b.c.d.e";
-              path = /test/deep;
-              type = "file";
-            }
-          ];
-          edges = [ ];
-        };
-        html = visualize.toHtml dottedGraph;
-      in
-      lib.hasPrefix "<!doctype html>" (lib.toLower (lib.trim html));
-    expected = true;
-  };
-
-  edgeCases."test handles self-referential edges filtered out" = {
-    expr =
-      let
-        selfRefGraph = {
-          nodes = [
-            {
-              id = "modules.self";
-              path = /test/self;
-              type = "file";
-            }
-          ];
-          edges = [
-            {
-              from = "modules.self";
-              to = "modules.self";
-              type = "import";
-            }
-          ];
-        };
-        html = visualize.toHtml selfRefGraph;
-      in
-      # Should produce valid HTML (self-refs are filtered in toHtml)
-      lib.hasPrefix "<!doctype html>" (lib.toLower (lib.trim html));
     expected = true;
   };
 }

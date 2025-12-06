@@ -130,13 +130,36 @@ in
 
   # Add perSystem-specific options
   options.perSystem = mkPerSystemOption (
-    { ... }:
+    { lib, ... }:
     {
       options.imp = {
         args = mkOption {
           type = types.attrsOf types.unspecified;
           default = { };
           description = "Extra per-system arguments passed to imported files.";
+        };
+
+        visualize = {
+          wasmDistPath = mkOption {
+            type = types.nullOr types.package;
+            default = null;
+            description = ''
+              Path to the imp.graph WASM distribution package.
+
+              Required for the interactive HTML visualization (imp-vis app).
+              Set to inputs.imp-graph.packages.''${system}.default to enable.
+            '';
+          };
+
+          lib = mkOption {
+            type = types.nullOr types.attrs;
+            default = null;
+            description = ''
+              The imp.graph visualization library.
+
+              Required for the imp-vis app. Set to inputs.imp-graph.lib to enable.
+            '';
+          };
         };
       };
     }
@@ -249,7 +272,7 @@ in
     # Registry migration outputs
     (lib.mkIf (cfg.registry.src != null) {
       perSystem =
-        { pkgs, ... }:
+        { pkgs, config, ... }:
         let
           migratePaths =
             if cfg.registry.migratePaths != [ ] then
@@ -267,11 +290,14 @@ in
           };
 
           analyzeLib = import ./analyze.nix { inherit lib; };
-          visualizeLib = import ./visualize { inherit lib; };
           graph = analyzeLib.analyzeRegistry {
             inherit registry;
             outputsSrc = cfg.src;
           };
+
+          # Access visualization config lazily to avoid infinite recursion
+          vizConfig = config.imp.visualize;
+          hasVisualization = vizConfig.wasmDistPath != null && vizConfig.lib != null;
         in
         {
           /*
@@ -290,17 +316,24 @@ in
             program = toString (pkgs.writeShellScript "imp-registry" migration.script);
             meta.description = "Detect and fix registry path renames";
           };
+
           /*
             Visualize registry dependencies as a graph.
 
             Analyzes the registry and outputs a dependency graph showing
             how modules reference each other via registry paths.
 
-            Run: nix run .#imp-vis [--format=dot|ascii|json]
+            Requires perSystem.imp.visualize.wasmDistPath and perSystem.imp.visualize.lib
+            to be set. See documentation for how to configure imp-graph.
+
+            Run: nix run .#imp-vis [--format=html|json]
           */
-          apps.imp-vis = {
+          apps.imp-vis = lib.mkIf hasVisualization {
             type = "app";
-            program = toString (visualizeLib.mkVisualizeScript { inherit pkgs graph; });
+            program = toString (vizConfig.lib.mkVisualizeScript {
+              inherit pkgs graph;
+              wasmDistPath = vizConfig.wasmDistPath;
+            });
             meta.description = "Visualize registry dependencies";
           };
         };

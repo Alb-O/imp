@@ -8,6 +8,7 @@
     nix-unit.url = "github:nix-community/nix-unit";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     docgen.url = "github:imp-nix/imp.docgen";
+    imp-graph.url = "github:imp-nix/imp.graph";
   };
 
   outputs =
@@ -18,6 +19,7 @@
       nix-unit,
       treefmt-nix,
       docgen,
+      imp-graph,
       ...
     }:
     let
@@ -71,8 +73,20 @@
             nix-unit
             treefmt-nix
             docgen
+            imp-graph
             ;
         };
+        registry.src = ./src;
       };
+
+      # Configure visualization for imp-vis app
+      perSystem =
+        { system, ... }:
+        {
+          imp.visualize = {
+            wasmDistPath = imp-graph.packages.${system}.default;
+            lib = imp-graph.lib;
+          };
+        };
     };
 }
