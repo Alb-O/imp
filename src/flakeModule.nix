@@ -308,43 +308,46 @@ in
           hasVisualization = vizConfig.wasmDistPath != null && vizConfig.lib != null;
         in
         {
-          /*
-            Detect registry renames and generate fix commands.
+          apps = {
+            /*
+              Detect registry renames and generate fix commands.
 
-             When directories are renamed, registry paths change. This app:
-             1. Scans files for registry.X.Y patterns
-             2. Compares against current registry to find broken references
-             3. Suggests mappings from old names to new names
-             4. Uses ast-grep for AST-aware replacements
+               When directories are renamed, registry paths change. This app:
+               1. Scans files for registry.X.Y patterns
+               2. Compares against current registry to find broken references
+               3. Suggests mappings from old names to new names
+               4. Uses ast-grep for AST-aware replacements
 
-             Run: nix run .#imp-registry
-          */
-          apps.imp-registry = {
-            type = "app";
-            program = toString (pkgs.writeShellScript "imp-registry" migration.script);
-            meta.description = "Detect and fix registry path renames";
-          };
+               Run: nix run .#imp-registry
+            */
+            imp-registry = {
+              type = "app";
+              program = toString (pkgs.writeShellScript "imp-registry" migration.script);
+              meta.description = "Detect and fix registry path renames";
+            };
+          }
+          // lib.optionalAttrs hasVisualization {
+            /*
+              Visualize registry dependencies as a graph.
 
-          /*
-            Visualize registry dependencies as a graph.
+              Analyzes the registry and outputs a dependency graph showing
+              how modules reference each other via registry paths.
 
-            Analyzes the registry and outputs a dependency graph showing
-            how modules reference each other via registry paths.
+              Requires perSystem.imp.visualize.wasmDistPath and perSystem.imp.visualize.lib
+              to be set. See documentation for how to configure imp-graph.
 
-            Requires perSystem.imp.visualize.wasmDistPath and perSystem.imp.visualize.lib
-            to be set. See documentation for how to configure imp-graph.
-
-            Run: nix run .#imp-vis [--format=html|json]
-          */
-          apps.imp-vis = lib.mkIf hasVisualization {
-            type = "app";
-            program = toString (
-              vizConfig.lib.mkVisualizeScript {
-                inherit pkgs graph;
-                wasmDistPath = vizConfig.wasmDistPath;
-              }
-            );
-            meta.description = "Visualize registry dependencies";
+              Run: nix run .#imp-vis [--format=html|json]
+            */
+            imp-vis = {
+              type = "app";
+              program = toString (
+                vizConfig.lib.mkVisualizeScript {
+                  inherit pkgs graph;
+                  wasmDistPath = vizConfig.wasmDistPath;
+                }
+              );
+              meta.description = "Visualize registry dependencies";
+            };
           };
         };
     })
