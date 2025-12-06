@@ -26,6 +26,7 @@
       imp = import ./src;
       lib = nixpkgs.lib;
       flakeModule = import ./src/flakeModule.nix;
+      formatterLib = import ./src/formatter;
     in
     {
       tests = import ./tests { inherit lib; };
@@ -52,6 +53,10 @@
 
       # Flake-parts integration
       flakeModules.default = flakeModule;
+
+      # Reusable formatter configuration
+      # Usage: formatter = imp.formatterLib.make { inherit pkgs treefmt-nix; };
+      inherit formatterLib;
     }
     // flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [

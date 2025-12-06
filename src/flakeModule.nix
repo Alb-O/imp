@@ -330,10 +330,12 @@ in
           */
           apps.imp-vis = lib.mkIf hasVisualization {
             type = "app";
-            program = toString (vizConfig.lib.mkVisualizeScript {
-              inherit pkgs graph;
-              wasmDistPath = vizConfig.wasmDistPath;
-            });
+            program = toString (
+              vizConfig.lib.mkVisualizeScript {
+                inherit pkgs graph;
+                wasmDistPath = vizConfig.wasmDistPath;
+              }
+            );
             meta.description = "Visualize registry dependencies";
           };
         };
