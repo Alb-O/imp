@@ -1,8 +1,6 @@
 # Config Trees
 
-Most NixOS configurations eventually collapse into a single file. Services, programs, users, networking, all jammed into `configuration.nix` until you're scrolling past 400 lines to find where you enabled SSH.
-
-Config trees invert this. The file path _is_ the option path: `programs/git.nix` sets `programs.git`. That's it.
+Config trees are option attrsets derrived from directory structure. The file path _is_ the option path: `programs/git.nix` sets `programs.git`. That's it.
 
 ```
 home/
