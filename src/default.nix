@@ -19,17 +19,25 @@ let
     and merges them into a single attrset. Detects conflicts when the
     same input name has different definitions in different files.
 
+    Accepts either a single path or a list of paths. When given multiple
+    paths, all are scanned and merged with conflict detection.
+
     # Example
 
     ```nix
+    # Single path
     imp.collectInputs ./outputs
     # => { treefmt-nix = { url = "github:numtide/treefmt-nix"; }; }
+
+    # Multiple paths
+    imp.collectInputs [ ./outputs ./registry ]
+    # => { treefmt-nix = { ... }; nur = { ... }; }
     ```
 
     # Arguments
 
-    path
-    : Directory or file path to scan for __inputs declarations.
+    pathOrPaths
+    : Directory/file path, or list of paths, to scan for __inputs declarations.
   */
   collectInputs = import ./collect-inputs.nix;
 

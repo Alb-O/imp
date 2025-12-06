@@ -406,6 +406,14 @@ in
   /**
     Build a modules list from mixed items. Handles paths, registry nodes, and modules.
 
+    For registry nodes or paths that import to attrsets with __module,
+    extracts just the __module. For functions that are "registry wrappers"
+    (take `inputs` arg and return attrsets with __module), wraps them to
+    extract __module from the result.
+
+    This allows registry modules to declare __inputs and __overlays
+    without polluting the module system.
+
     # Example
 
     ```nix
@@ -428,12 +436,53 @@ in
     let
       registryLib = import ./registry.nix { lib = updated.lib or builtins; };
       isPath = p: builtins.isPath p || (builtins.isString p && builtins.substring 0 1 p == "/");
+
+      # Registry wrappers: functions taking `inputs` (not `config`/`pkgs`) that return { __module, ... }
+      # Also handles attrsets with __functor (callable attrsets)
+      isRegistryWrapper =
+        value:
+        let
+          fn = if builtins.isAttrs value && value ? __functor then value.__functor value else value;
+          args = if builtins.isFunction fn then builtins.functionArgs fn else { };
+        in
+        args ? inputs && !(args ? config) && !(args ? pkgs);
+
+      # For attrsets with __module, extract it directly.
+      # For registry wrapper functions (or __functor attrsets), create a wrapper that calls the function,
+      # extracts __module, and calls it with module args. Explicit arg declarations
+      # are required because the module system uses builtins.functionArgs.
+      extractModule =
+        value:
+        if builtins.isAttrs value && value ? __module then
+          value.__module
+        else if
+          (builtins.isFunction value || (builtins.isAttrs value && value ? __functor))
+          && isRegistryWrapper value
+        then
+          {
+            config ? null,
+            lib ? null,
+            pkgs ? null,
+            options ? null,
+            modulesPath ? null,
+            inputs ? null,
+            osConfig ? null,
+            ...
+          }@args:
+          let
+            result = value args;
+            module = if builtins.isAttrs result && result ? __module then result.__module else result;
+          in
+          if builtins.isFunction module then module args else module
+        else
+          value;
+
       process =
         item:
         if registryLib.isRegistryNode item then
-          import item.__path
+          extractModule (import item.__path)
         else if isPath item then
-          import item
+          extractModule (import item)
         else
           item;
     in

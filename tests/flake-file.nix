@@ -69,6 +69,42 @@ in
     expected = { };
   };
 
+  collectInputs."test extracts __inputs from __functor pattern" = {
+    expr = it.collectInputs ./fixtures/registry-wrappers/basic.nix;
+    expected = {
+      example.url = "github:example/repo";
+    };
+  };
+
+  collectInputs."test extracts __inputs from attrset with __module" = {
+    expr = it.collectInputs ./fixtures/registry-wrappers/attrset-with-module.nix;
+    expected = {
+      static.url = "github:static/input";
+    };
+  };
+
+  collectInputs."test collects from __functor pattern directory" = {
+    expr = builtins.attrNames (it.collectInputs ./fixtures/registry-wrappers);
+    expected = [
+      "example"
+      "foo"
+      "nested"
+      "nur"
+      "static"
+    ];
+  };
+
+  collectInputs."test accepts list of paths" = {
+    expr = it.collectInputs [
+      ./fixtures/registry-wrappers/basic.nix
+      ./fixtures/collect-inputs/outputs/perSystem/formatter.nix
+    ];
+    expected = {
+      example.url = "github:example/repo";
+      treefmt-nix.url = "github:numtide/treefmt-nix";
+    };
+  };
+
   # formatInputs tests
   formatInputs."test formats simple input with url shorthand" = {
     expr = it.formatInputs { nixpkgs.url = "github:nixos/nixpkgs"; };

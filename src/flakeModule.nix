@@ -108,7 +108,15 @@ let
 
   # Flake file generation
   flakeFileCfg = cfg.flakeFile;
-  collectedInputs = if flakeFileCfg.enable then impLib.collectInputs cfg.src else { };
+
+  # Collect inputs from both outputs dir and registry dir
+  inputSources = builtins.filter (p: p != null) [
+    cfg.src
+    cfg.registry.src
+  ];
+  collectedInputs =
+    if flakeFileCfg.enable && inputSources != [ ] then impLib.collectInputs inputSources else { };
+
   generatedFlakeContent =
     if flakeFileCfg.enable then
       impLib.formatFlake {
