@@ -1,12 +1,10 @@
 {
   pkgs,
   treefmt-nix,
+  imp-fmt,
   ...
 }:
-let
-  formatterLib = import ../../src/formatter;
-in
-formatterLib.make {
+imp-fmt.lib.make {
   inherit pkgs treefmt-nix;
   excludes = [ "tests/fixtures/*" ];
 }

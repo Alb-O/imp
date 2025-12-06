@@ -29,18 +29,6 @@ in
       expected = true;
     };
 
-  analyze."test toHtml produces valid HTML output" =
-    let
-      result = analyze.analyzeRegistry { registry = testRegistry; };
-      html = analyze.toHtml result;
-      trimmed = lib.trim html;
-    in
-    {
-      # Check for doctype (case-insensitive) - formatter may change case
-      expr = lib.hasPrefix "<!doctype html>" (lib.toLower trimmed);
-      expected = true;
-    };
-
   analyze."test toJson produces serializable structure" =
     let
       result = analyze.analyzeRegistry { registry = testRegistry; };

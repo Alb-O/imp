@@ -3,12 +3,39 @@
 ";
 
   inputs = {
+    # Core dependencies (minimal for library consumers)
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    nix-unit.url = "github:nix-community/nix-unit";
+
+    # Formatter library (standalone, no circular deps)
+    imp-fmt.url = "github:imp-nix/imp.fmt";
+    imp-fmt.inputs.nixpkgs.follows = "nixpkgs";
+
+    # Dev dependencies (for testing/formatting in this repo)
     treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+    imp-fmt.inputs.treefmt-nix.follows = "treefmt-nix";
+
+    nix-unit.url = "github:nix-community/nix-unit";
+    nix-unit.inputs.nixpkgs.follows = "nixpkgs";
+    nix-unit.inputs.treefmt-nix.follows = "treefmt-nix";
+    nix-unit.inputs.flake-parts.follows = "flake-parts";
+
+    # Optional: docgen for building imp.lib's own docs
+    # Consumers who want docs should add their own docgen input
     docgen.url = "github:imp-nix/imp.docgen";
+    docgen.inputs.nixpkgs.follows = "nixpkgs";
+    docgen.inputs.treefmt-nix.follows = "treefmt-nix";
+    docgen.inputs.nix-unit.follows = "nix-unit";
+    docgen.inputs.imp-fmt.follows = "imp-fmt";
+
+    # Optional: imp-graph for building imp.lib's own visualization
+    # Consumers who want visualization should add their own imp-graph input
     imp-graph.url = "github:imp-nix/imp.graph";
+    imp-graph.inputs.nixpkgs.follows = "nixpkgs";
+    imp-graph.inputs.treefmt-nix.follows = "treefmt-nix";
+    imp-graph.inputs.nix-unit.follows = "nix-unit";
+    imp-graph.inputs.imp-fmt.follows = "imp-fmt";
   };
 
   outputs =
@@ -18,6 +45,7 @@
       flake-parts,
       nix-unit,
       treefmt-nix,
+      imp-fmt,
       docgen,
       imp-graph,
       ...
@@ -26,7 +54,9 @@
       imp = import ./src;
       lib = nixpkgs.lib;
       flakeModule = import ./src/flakeModule.nix;
-      formatterLib = import ./src/formatter;
+
+      # Re-export formatterLib from imp-fmt for backward compatibility
+      formatterLib = imp-fmt.lib;
     in
     {
       tests = import ./tests { inherit lib; };
@@ -52,9 +82,13 @@
       collectAndFormatFlake = imp.collectAndFormatFlake;
 
       # Flake-parts integration
-      flakeModules.default = flakeModule;
+      flakeModules = {
+        default = flakeModule;
+        docs = ./src/flakeModules/docs.nix;
+        visualize = ./src/flakeModules/visualize.nix;
+      };
 
-      # Reusable formatter configuration
+      # Reusable formatter configuration (re-exported from imp-fmt)
       # Usage: formatter = imp.formatterLib.make { inherit pkgs treefmt-nix; };
       inherit formatterLib;
     }
@@ -66,7 +100,11 @@
         "aarch64-darwin"
       ];
 
-      imports = [ flakeModule ];
+      imports = [
+        flakeModule
+        ./src/flakeModules/docs.nix
+        ./src/flakeModules/visualize.nix
+      ];
 
       # Dogfooding: use imp module to load outputs
       imp = {
@@ -77,21 +115,21 @@
             nixpkgs
             nix-unit
             treefmt-nix
-            docgen
-            imp-graph
+            imp-fmt
             ;
         };
         registry.src = ./src;
-      };
 
-      # Configure visualization for imp-vis app
-      perSystem =
-        { system, ... }:
-        {
-          imp.visualize = {
-            wasmDistPath = imp-graph.packages.${system}.default;
-            lib = imp-graph.lib;
-          };
+        # Configure docs for imp.lib itself
+        docs = {
+          manifest = ./docs/manifest.nix;
+          srcDir = ./src;
+          siteDir = ./docs;
+          name = "imp";
+          anchorPrefix = "imp";
+          optionsModule = ./src/options-schema.nix;
+          optionsPrefix = "imp.";
         };
+      };
     };
 }

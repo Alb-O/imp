@@ -5,17 +5,17 @@
   nixpkgs,
   nix-unit,
   treefmt-nix,
+  imp-fmt,
   ...
 }:
 let
-  treefmtEval = treefmt-nix.lib.evalModule pkgs {
-    projectRootFile = "flake.nix";
-    programs.nixfmt.enable = true;
-    settings.global.excludes = [ "tests/fixtures/*" ];
+  formatterEval = imp-fmt.lib.makeEval {
+    inherit pkgs treefmt-nix;
+    excludes = [ "tests/fixtures/*" ];
   };
 in
 {
-  formatting = treefmtEval.config.build.check self;
+  formatting = formatterEval.config.build.check self;
   nix-unit =
     pkgs.runCommand "nix-unit-tests"
       {

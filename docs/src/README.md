@@ -1,5 +1,7 @@
 # Imp 😈
 
+![Ix the Imp](assets/ix-the-imp.png)
+
 Nix flakes require explicit imports. Add a module, update the imports list. Reorganize your directory structure, fix every relative path. Imp removes this busywork: point it at a directory and it imports everything inside, automatically inferring and mapping filesystem paths to attribute names.
 
 ```nix
