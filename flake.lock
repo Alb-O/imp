@@ -1,20 +1,5 @@
 {
   "nodes": {
-    "crane": {
-      "locked": {
-        "lastModified": 1764903584,
-        "narHash": "sha256-RSkJtNtx0SEaQiYqsoFoRynwfZLo2OZ9z6rUq1DJR6g=",
-        "owner": "ipetkov",
-        "repo": "crane",
-        "rev": "2b3a5a88d852575758e1eb6ac9ee677fcd633fc1",
-        "type": "github"
-      },
-      "original": {
-        "owner": "ipetkov",
-        "repo": "crane",
-        "type": "github"
-      }
-    },
     "docgen": {
       "inputs": {
         "imp-fmt": [
@@ -82,66 +67,6 @@
       "original": {
         "owner": "imp-nix",
         "repo": "imp.fmt",
-        "type": "github"
-      }
-    },
-    "imp-graph": {
-      "inputs": {
-        "crane": "crane",
-        "imp-fmt": [
-          "imp-fmt"
-        ],
-        "nix-unit": [
-          "nix-unit"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "rust-overlay": "rust-overlay",
-        "treefmt-nix": [
-          "treefmt-nix"
-        ]
-      },
-      "locked": {
-        "lastModified": 1764988025,
-        "narHash": "sha256-2kdpHG4Dla/G5A37gQn8K1FEqBHStwhuP+cX40Q95mc=",
-        "owner": "imp-nix",
-        "repo": "imp.graph",
-        "rev": "37c3130ea4bee5cb45801281c02597851cfa6c1f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "imp-nix",
-        "repo": "imp.graph",
-        "type": "github"
-      }
-    },
-    "imp-refactor": {
-      "inputs": {
-        "imp-fmt": [
-          "imp-fmt"
-        ],
-        "nix-unit": [
-          "nix-unit"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "treefmt-nix": [
-          "treefmt-nix"
-        ]
-      },
-      "locked": {
-        "lastModified": 1765101865,
-        "narHash": "sha256-QDS8JqPUEdGHCuVPfkDjt9dS9sayuNULhM15BuXDjGs=",
-        "owner": "imp-nix",
-        "repo": "imp.refactor",
-        "rev": "ee04d4c11fc36322ac9adb06625b427afa5dba88",
-        "type": "github"
-      },
-      "original": {
-        "owner": "imp-nix",
-        "repo": "imp.refactor",
         "type": "github"
       }
     },
@@ -229,32 +154,9 @@
         "docgen": "docgen",
         "flake-parts": "flake-parts",
         "imp-fmt": "imp-fmt",
-        "imp-graph": "imp-graph",
-        "imp-refactor": "imp-refactor",
         "nix-unit": "nix-unit",
         "nixpkgs": "nixpkgs",
         "treefmt-nix": "treefmt-nix"
-      }
-    },
-    "rust-overlay": {
-      "inputs": {
-        "nixpkgs": [
-          "imp-graph",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1764902447,
-        "narHash": "sha256-wNqkDBj+tjK619sTHPEA7uhjr7DHHEY8OsFou31dxy0=",
-        "owner": "oxalica",
-        "repo": "rust-overlay",
-        "rev": "d914a744a83098eeb28125d2848ad383b209223f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "oxalica",
-        "repo": "rust-overlay",
-        "type": "github"
       }
     },
     "treefmt-nix": {

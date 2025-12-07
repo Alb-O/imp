@@ -29,21 +29,6 @@
     docgen.inputs.nix-unit.follows = "nix-unit";
     docgen.inputs.imp-fmt.follows = "imp-fmt";
 
-    # Optional: imp-graph for building imp.lib's own visualization
-    # Consumers who want visualization should add their own imp-graph input
-    imp-graph.url = "github:imp-nix/imp.graph";
-    imp-graph.inputs.nixpkgs.follows = "nixpkgs";
-    imp-graph.inputs.treefmt-nix.follows = "treefmt-nix";
-    imp-graph.inputs.nix-unit.follows = "nix-unit";
-    imp-graph.inputs.imp-fmt.follows = "imp-fmt";
-
-    # Optional: imp-refactor for registry migration tooling
-    # Consumers can follow this: inputs.imp-refactor.follows = "imp/imp-refactor"
-    imp-refactor.url = "github:imp-nix/imp.refactor";
-    imp-refactor.inputs.nixpkgs.follows = "nixpkgs";
-    imp-refactor.inputs.treefmt-nix.follows = "treefmt-nix";
-    imp-refactor.inputs.nix-unit.follows = "nix-unit";
-    imp-refactor.inputs.imp-fmt.follows = "imp-fmt";
   };
 
   outputs =
@@ -55,7 +40,6 @@
       treefmt-nix,
       imp-fmt,
       docgen,
-      imp-graph,
       ...
     }:
     let
