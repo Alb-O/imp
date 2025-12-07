@@ -314,9 +314,9 @@ in
               Requires perSystem.imp.visualize.wasmDistPath and perSystem.imp.visualize.lib
               to be set. See documentation for how to configure imp-graph.
 
-              Run: nix run .#imp-vis [--format=html|json]
+              Run: nix run .#imp-graph [--format=html|json]
             */
-            imp-vis = {
+            imp-graph = {
               type = "app";
               program = toString (
                 vizConfig.lib.mkVisualizeScript {

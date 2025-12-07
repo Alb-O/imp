@@ -22,12 +22,12 @@
   }
   ```
 
-  This adds `apps.visualize`, which scans the registry for `registry.X.Y`
-  references and generates a dependency graph. Run `nix run .#visualize` to
+  This adds `apps.graph`, which scans the registry for `registry.X.Y`
+  references and generates a dependency graph. Run `nix run .#graph` to
   open an interactive HTML visualization in your browser.
 
   The module also configures `perSystem.imp.visualize.wasmDistPath` and
-  `perSystem.imp.visualize.lib`, enabling the `imp-vis` app from the main
+  `perSystem.imp.visualize.lib`, enabling the `imp-graph` app from the main
   flakeModule if you have a registry configured.
 */
 {
@@ -61,22 +61,22 @@ in
         vizLib = inputs.imp-graph.lib;
       in
       {
-        # Configure the perSystem.imp.visualize options for imp-vis app
+        # Configure the perSystem.imp.visualize options for imp-graph app
         imp.visualize = {
           wasmDistPath = wasmDistPath;
           lib = vizLib;
         };
 
-        # Standalone visualize app for analyzing any path
-        apps.visualize = {
+        # Standalone graph app for analyzing any path
+        apps.graph = {
           type = "app";
           meta.description = "Visualize imp registry dependencies (standalone)";
           program = toString (
             vizLib.mkVisualizeScript {
               inherit pkgs wasmDistPath;
-              impSrc = inputs.self.sourceInfo or inputs.self;
+              impSrc = inputs.imp;
               nixpkgsFlake = inputs.nixpkgs;
-              name = "imp-vis";
+              name = "imp-graph";
             }
           );
         };
