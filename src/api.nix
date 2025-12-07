@@ -4,11 +4,11 @@
   This module defines all chainable methods available on the imp object.
   Methods are organized into categories:
 
-  - Filtering: filter, filterNot, match, matchNot, initFilter
-  - Transforming: map, mapTree
-  - Tree building: tree, treeWith, configTree, configTreeWith
-  - File lists: leafs, files, pipeTo
-  - Extending: addPath, addAPI, withLib, new
+  - Filtering: `filter`, `filterNot`, `match`, `matchNot`, `initFilter`
+  - Transforming: `map`, `mapTree`
+  - Tree building: `tree`, `treeWith`, `configTree`, `configTreeWith`
+  - File lists: `leafs`, `files`, `pipeTo`
+  - Extending: `addPath`, `addAPI`, `withLib`, `new`
 */
 let
   utils = import ./lib.nix;
