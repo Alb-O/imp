@@ -39,7 +39,6 @@
         name = "Registry";
         files = [
           "registry.nix"
-          "migrate.nix"
           "analyze.nix"
           {
             name = "visualize/default.nix";
@@ -88,10 +87,6 @@
       {
         heading = "Visualize";
         file = "visualize/default.nix";
-      }
-      {
-        heading = "Migrate";
-        file = "migrate.nix";
       }
       {
         heading = "Standalone Utilities";

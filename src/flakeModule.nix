@@ -36,7 +36,6 @@ let
 
   impLib = import ./.;
   registryLib = import ./registry.nix { inherit lib; };
-  migrateLib = import ./migrate.nix { inherit lib; };
 
   cfg = config.imp;
 
@@ -277,26 +276,11 @@ in
         };
     })
 
-    # Registry migration outputs
+    # Registry visualization outputs
     (lib.mkIf (cfg.registry.src != null) {
       perSystem =
         { pkgs, config, ... }:
         let
-          migratePaths =
-            if cfg.registry.migratePaths != [ ] then
-              cfg.registry.migratePaths
-            else if cfg.src != null then
-              [ cfg.src ]
-            else
-              [ ];
-
-          migration = migrateLib.detectRenames {
-            inherit registry;
-            paths = migratePaths;
-            astGrep = "${pkgs.ast-grep}/bin/ast-grep";
-            registryName = cfg.registry.name;
-          };
-
           analyzeLib = import ./analyze.nix { inherit lib; };
           graph = analyzeLib.analyzeRegistry {
             inherit registry;
@@ -308,25 +292,7 @@ in
           hasVisualization = vizConfig.wasmDistPath != null && vizConfig.lib != null;
         in
         {
-          apps = {
-            /*
-              Detect registry renames and generate fix commands.
-
-               When directories are renamed, registry paths change. This app:
-               1. Scans files for registry.X.Y patterns
-               2. Compares against current registry to find broken references
-               3. Suggests mappings from old names to new names
-               4. Uses ast-grep for AST-aware replacements
-
-               Run: nix run .#imp-registry
-            */
-            imp-registry = {
-              type = "app";
-              program = toString (pkgs.writeShellScript "imp-registry" migration.script);
-              meta.description = "Detect and fix registry path renames";
-            };
-          }
-          // lib.optionalAttrs hasVisualization {
+          apps = lib.optionalAttrs hasVisualization {
             /*
               Visualize registry dependencies as a graph.
 

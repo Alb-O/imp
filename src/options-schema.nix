@@ -110,18 +110,6 @@ in
           }
         '';
       };
-
-      migratePaths = mkOption {
-        type = types.listOf types.path;
-        default = [ ];
-        description = ''
-          Directories to scan for registry references when detecting renames.
-          If empty, defaults to [ imp.src ] when registry.src is set.
-        '';
-        example = literalExpression ''
-          [ ./nix/outputs ./nix/flake ]
-        '';
-      };
     };
 
     flakeFile = {
