@@ -278,6 +278,9 @@ in
 
     # Registry visualization outputs
     (lib.mkIf (cfg.registry.src != null) {
+      # Expose registry as flake output for tooling (imp-refactor, etc.)
+      flake.registry = registry;
+
       perSystem =
         { pkgs, config, ... }:
         let
