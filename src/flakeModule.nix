@@ -278,7 +278,16 @@ in
 
     # Registry visualization outputs
     (lib.mkIf (cfg.registry.src != null) {
-      # Expose registry as flake output for tooling (imp-refactor, etc.)
+      /*
+        Expose the registry attrset as a flake output.
+
+        Evaluating `nix eval .#registry` returns the full registry structure,
+        making it available to external tools like imp-refactor that need to
+        validate registry paths without importing the flake's Nix code.
+
+        The output mirrors the in-memory registry: nested attrsets where each
+        leaf contains a `__path` attribute pointing to the module file.
+      */
       flake.registry = registry;
 
       perSystem =

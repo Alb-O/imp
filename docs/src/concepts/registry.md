@@ -65,3 +65,7 @@ imp.registry.modules = {
   "nixos.disko" = inputs.disko.nixosModules.default;
 };
 ```
+
+## Flake output
+
+When `imp.registry.src` is set, the registry is exposed as a flake output. Run `nix eval .#registry` to inspect the structure or pipe it to tools like imp-refactor for validating registry references across the codebase.
