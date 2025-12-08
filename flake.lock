@@ -16,11 +16,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1765197728,
-        "narHash": "sha256-XtfF9VY60hv6EIJsGk69YE/B3A22EH0Fp+FUt7R/E8Q=",
+        "lastModified": 1765232011,
+        "narHash": "sha256-vAgKyTEvCpZ/MMNlx2IEzS9Te0ZwMisXMgT/zutEiSY=",
         "owner": "imp-nix",
         "repo": "imp.docgen",
-        "rev": "667c3f4da97b4e8a7b2896182521f8091f89f50c",
+        "rev": "966b482d45f1ea362a94170aac502dde2a0ede46",
         "type": "github"
       },
       "original": {
@@ -57,11 +57,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1765197725,
-        "narHash": "sha256-x3EjWfxLecvDBkh1PZL/kAG/8RAjkmFltUL8e+ZQFLs=",
+        "lastModified": 1765198576,
+        "narHash": "sha256-HMfNvxRxPhKG4Lzkdn6N5LifMiilQK1DOAVFe2muwZs=",
         "owner": "imp-nix",
         "repo": "imp.fmt",
-        "rev": "81124d9322b048416e0568752acf84d09a8784bf",
+        "rev": "8c8aaa10fedf7db705f3bea36a480d1e6ffb7f9c",
         "type": "github"
       },
       "original": {
