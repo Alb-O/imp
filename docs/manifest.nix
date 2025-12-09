@@ -47,6 +47,13 @@
         ];
       }
       {
+        name = "Export Sinks";
+        files = [
+          "collect-exports.nix"
+          "export-sinks.nix"
+        ];
+      }
+      {
         name = "Flake Integration";
         files = [
           {
@@ -87,6 +94,15 @@
       {
         heading = "Visualize";
         file = "visualize/default.nix";
+      }
+      {
+        heading = "Export Sinks";
+        file = "default.nix";
+        exports = [
+          "collectExports"
+          "buildExportSinks"
+          "exportSinks"
+        ];
       }
       {
         heading = "Standalone Utilities";

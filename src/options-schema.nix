@@ -112,6 +112,63 @@ in
       };
     };
 
+    exports = {
+      enable = mkEnableOption "export sinks from __exports declarations" // {
+        default = true;
+      };
+
+      sources = mkOption {
+        type = types.listOf types.path;
+        default = [ ];
+        description = ''
+          List of directories to scan for __exports declarations.
+
+          By default, scans both registry.src and src if they are set.
+          Explicitly setting this overrides the default.
+        '';
+        example = literalExpression ''
+          [ ./nix/registry ./nix/features ]
+        '';
+      };
+
+      sinkDefaults = mkOption {
+        type = types.attrsOf types.str;
+        default = {
+          "nixos.*" = "merge";
+          "hm.*" = "merge";
+        };
+        description = ''
+          Default merge strategies for sink patterns.
+
+          Patterns use glob syntax where * matches any suffix.
+          Available strategies:
+          - "merge": Deep merge (lib.recursiveUpdate)
+          - "override": Last writer wins
+          - "list-append": Concatenate lists
+          - "mkMerge": Use lib.mkMerge for module semantics
+        '';
+        example = literalExpression ''
+          {
+            "nixos.*" = "merge";
+            "hm.*" = "mkMerge";
+            "packages.*" = "override";
+          }
+        '';
+      };
+
+      enableDebug = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Include __meta with contributor info in sinks.
+
+          When enabled, each sink includes:
+          - __meta.contributors: list of source paths
+          - __meta.strategy: effective merge strategy
+        '';
+      };
+    };
+
     flakeFile = {
       enable = mkEnableOption "flake.nix generation from __inputs declarations";
 

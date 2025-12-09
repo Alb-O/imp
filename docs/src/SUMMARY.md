@@ -6,6 +6,7 @@
   - [Directory-Based Imports](./concepts/directory-imports.md)
   - [Naming Conventions](./concepts/naming-conventions.md)
   - [The Registry](./concepts/registry.md)
+  - [Export Sinks](./concepts/exports.md)
 - [Guides](<>)
   - [Using with flake-parts](./guides/flake-parts.md)
   - [Config Trees](./guides/config-trees.md)

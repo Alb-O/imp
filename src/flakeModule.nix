@@ -116,6 +116,34 @@ let
   collectedInputs =
     if flakeFileCfg.enable && inputSources != [ ] then impLib.collectInputs inputSources else { };
 
+  # Export sinks configuration
+  exportsCfg = cfg.exports;
+
+  # Determine sources for export scanning
+  exportSources =
+    if exportsCfg.sources != [ ] then
+      exportsCfg.sources
+    else
+      builtins.filter (p: p != null) [
+        cfg.registry.src
+        cfg.src
+      ];
+
+  # Build export sinks if enabled
+  exportSinks =
+    if exportsCfg.enable && exportSources != [ ] then
+      let
+        collected = impLib.collectExports exportSources;
+      in
+      impLib.buildExportSinks {
+        inherit lib;
+        inherit collected;
+        sinkDefaults = exportsCfg.sinkDefaults;
+        enableDebug = exportsCfg.enableDebug;
+      }
+    else
+      { };
+
   generatedFlakeContent =
     if flakeFileCfg.enable then
       impLib.formatFlake {
@@ -274,6 +302,35 @@ in
                 fi
               '';
         };
+    })
+
+    # Export sinks output
+    (lib.mkIf (exportsCfg.enable && exportSources != [ ]) {
+      /*
+        Expose export sinks as flake outputs.
+
+        Modules can declare exports using __exports:
+
+          {
+            __exports."nixos.role.desktop" = {
+              value = { services.pipewire.enable = true; };
+              strategy = "merge";
+            };
+          }
+
+        These are collected and merged into sinks available at:
+
+          flake.exports.nixos.role.desktop
+          flake.exports.hm.role.desktop
+
+        Consumers can then import these sinks:
+
+          { inputs, ... }:
+          {
+            imports = [ inputs.self.exports.nixos.role.desktop.__module ];
+          }
+      */
+      flake.exports = exportSinks;
     })
 
     # Registry visualization outputs

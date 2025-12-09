@@ -22,11 +22,11 @@ API method definitions for imp.
 This module defines all chainable methods available on the imp object.
 Methods are organized into categories:
 
-- Filtering: filter, filterNot, match, matchNot, initFilter
-- Transforming: map, mapTree
-- Tree building: tree, treeWith, configTree, configTreeWith
-- File lists: leafs, files, pipeTo
-- Extending: addPath, addAPI, withLib, new
+- Filtering: `filter`, `filterNot`, `match`, `matchNot`, `initFilter`
+- Transforming: `map`, `mapTree`
+- Tree building: `tree`, `treeWith`, `configTree`, `configTreeWith`
+- File lists: `leafs`, `files`, `pipeTo`
+- Extending: `addPath`, `addAPI`, `withLib`, `new`
 
 ### lib.nix
 
@@ -48,9 +48,9 @@ This module handles:
 
 Builds nested attrset from directory structure.
 
-Naming: foo.nix | foo/default.nix -> { foo = ... }
-foo\_.nix -> { foo = ... } (escapes reserved names)
-\_foo.nix | \_foo/ -> ignored
+Naming: `foo.nix` | `foo/default.nix` -> `{ foo = ... }`
+`foo_.nix` -> `{ foo = ... }` (escapes reserved names)
+`_foo.nix` | `_foo/` -> ignored
 
 #### Example
 
@@ -101,7 +101,7 @@ imp.treeWith lib (f: f args) ./outputs
 
 Builds a NixOS/Home Manager module where directory structure = option paths.
 
-Each file receives module args ({ config, lib, pkgs, ... }) plus extraArgs,
+Each file receives module args (`{ config, lib, pkgs, ... }`) plus `extraArgs`,
 and returns config values. The path becomes the option path:
 
 - `programs/git.nix` -> `{ programs.git = <result>; }`
@@ -158,8 +158,8 @@ Merges multiple config trees into a single NixOS/Home Manager module.
 
 Supports two merge strategies:
 
-- "override" (default): Later trees override earlier (lib.recursiveUpdate)
-- "merge": Use module system's mkMerge for proper option merging
+- `override` (default): Later trees override earlier (`lib.recursiveUpdate`)
+- `merge`: Use module system's `mkMerge` for proper option merging
 
 This enables composable features where one extends another:
 
@@ -194,11 +194,11 @@ Or with merge strategy for concatenating list options:
 }
 ```
 
-With "override": later values completely replace earlier ones.
-With "merge": options combine according to module system rules:
+With `override`: later values completely replace earlier ones.
+With `merge`: options combine according to module system rules:
 
 - lists concatenate
-- strings may error (use mkForce/mkDefault to control)
+- strings may error (use `mkForce`/`mkDefault` to control)
 - nested attrs merge recursively
 
 ## Registry
@@ -258,30 +258,7 @@ Usage in files:
 }
 ```
 
-Note: Directories are "path-like" (have \_\_path) so they work with `imp`.
-
-### migrate.nix
-
-Registry migration: detect renames and generate ast-grep commands to update references.
-
-When directories are renamed, registry paths change. This module:
-
-1. Scans files for registry.X.Y patterns
-1. Compares against current registry to find broken references
-1. Suggests mappings from old names to new names
-1. Generates ast-grep commands to fix all references
-
-#### Usage
-
-```nix
-migrate = import ./migrate.nix { inherit lib; };
-
-# Get migration commands
-migrate.detectRenames {
-  registry = currentRegistry;
-  files = [ ./nix/outputs ./nix/flake ];
-}
-```
+Note: Directories are "path-like" (have `__path`) so they work with `imp`.
 
 ### analyze.nix
 
@@ -317,6 +294,119 @@ imp.analyze.registry registry
 ### visualize/default.nix
 
 Visualization output for dependency graphs.
+
+## Export Sinks
+
+### collect-exports.nix
+
+Collects \_\_exports declarations from directory trees.
+Standalone implementation - no nixpkgs dependency, only builtins.
+
+Scans `.nix` files recursively for `__exports` attribute declarations and
+collects them, tracking source paths for debugging and conflict detection.
+
+Note: Only attrsets with `__exports` are collected. For functions that
+need to declare exports, use the `__functor` pattern:
+
+```nix
+{
+  __exports = {
+    "nixos.role.desktop.services" = {
+      value = { pipewire.enable = true; };
+      strategy = "merge";
+    };
+  };
+  __functor = _: { inputs, ... }: { __module = ...; };
+}
+```
+
+#### Example
+
+```nix
+# Single path
+collectExports ./nix/registry
+# => {
+#   "nixos.role.desktop.services" = [
+#     {
+#       source = "/nix/registry/mod/nixos/features/desktop/audio.nix";
+#       value = { pipewire.enable = true; };
+#       strategy = "merge";
+#     }
+#   ];
+# }
+
+# Multiple paths (merged)
+collectExports [ ./nix/registry ./nix/features ]
+```
+
+#### Arguments
+
+pathOrPaths
+: Directory/file path, or list of paths, to scan for \_\_exports declarations.
+
+### export-sinks.nix
+
+Build sinks from collected exports with merge strategy support.
+
+Takes the output from collectExports and produces materialized sinks
+by applying merge strategies. Each sink becomes a usable Nix value
+(typically a module or attrset).
+
+#### Merge Strategies
+
+- `merge`: Deep merge using lib.recursiveUpdate (last wins for primitives)
+- `override`: Last writer completely replaces earlier values
+- `list-append`: Concatenate lists (error if non-list)
+- `mkMerge`: Use lib.mkMerge for module system semantics (requires lib)
+
+#### Example
+
+```nix
+buildExportSinks {
+  lib = nixpkgs.lib;
+  collected = {
+    "nixos.role.desktop" = [
+      {
+        source = "/path/to/audio.nix";
+        value = { services.pipewire.enable = true; };
+        strategy = "merge";
+      }
+      {
+        source = "/path/to/wayland.nix";
+        value = { services.greetd.enable = true; };
+        strategy = "merge";
+      }
+    ];
+  };
+  sinkDefaults = {
+    "nixos.*" = "merge";
+    "hm.*" = "merge";
+  };
+}
+# => {
+#   nixos.role.desktop = {
+#     __module = { ... merged module ... };
+#     __meta = {
+#       contributors = [ "/path/to/audio.nix" "/path/to/wayland.nix" ];
+#       keys = [ "nixos.role.desktop" ];
+#     };
+#   };
+# }
+```
+
+#### Arguments
+
+lib
+: nixpkgs lib for merge operations (required for mkMerge strategy).
+
+collected
+: Output from collectExports - attrset of sink keys to export records.
+
+sinkDefaults
+: Optional attrset mapping glob patterns to default strategies.
+
+enableDebug
+: Include \_\_meta with contributor info (default: true).
 
 ## Flake Integration
 

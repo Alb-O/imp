@@ -35,7 +35,7 @@ predicate
 
 ## `imp.match` {#imp.match}
 
-Filter paths by regex. Uses builtins.match.
+Filter paths by regex. Uses `builtins.match`.
 
 ### Example
 
@@ -65,7 +65,7 @@ regex
 
 ## `imp.initFilter` {#imp.initFilter}
 
-Replace the default filter. By default, imp finds .nix files
+Replace the default filter. By default, imp finds `.nix` files
 and excludes paths containing underscore prefixes.
 
 ### Example
@@ -97,7 +97,7 @@ f
 
 ## `imp.mapTree` {#imp.mapTree}
 
-Transform values when building a tree with .tree. Composes with multiple calls.
+Transform values when building a tree with `.tree`. Composes with multiple calls.
 
 ### Example
 
@@ -114,7 +114,7 @@ f
 
 ## `imp.withLib` {#imp.withLib}
 
-Provide nixpkgs lib. Required before using .leafs, .files, .tree, or .configTree.
+Provide nixpkgs `lib`. Required before using `.leafs`, `.files`, `.tree`, or `.configTree`.
 
 ### Example
 
@@ -148,7 +148,7 @@ path
 
 ## `imp.addAPI` {#imp.addAPI}
 
-Extend imp with custom methods. Methods receive self for chaining.
+Extend imp with custom methods. Methods receive `self` for chaining.
 
 ### Example
 
@@ -184,7 +184,7 @@ f
 
 ## `imp.leafs` {#imp.leafs}
 
-Get the list of matched files. Requires .withLib.
+Get the list of matched files. Requires `.withLib`.
 
 ### Example
 
@@ -194,7 +194,7 @@ Get the list of matched files. Requires .withLib.
 
 ## `imp.tree` {#imp.tree}
 
-Build a nested attrset from directory structure. Requires .withLib.
+Build a nested attrset from directory structure. Requires `.withLib`.
 
 Directory names become attribute names. Files are imported and their
 values placed at the corresponding path.
@@ -213,7 +213,7 @@ path
 
 ## `imp.treeWith` {#imp.treeWith}
 
-Convenience function combining .withLib, .mapTree, and .tree.
+Convenience function combining `.withLib`, `.mapTree`, and `.tree`.
 
 ### Example
 
@@ -255,7 +255,7 @@ path
 
 ## `imp.configTreeWith` {#imp.configTreeWith}
 
-Like .configTree but passes extra arguments to each file.
+Like `.configTree` but passes extra arguments to each file.
 
 ### Example
 
@@ -288,7 +288,7 @@ Merge multiple config trees into a single module.
 ### Arguments
 
 options (optional)
-: Attribute set with strategy ("override" or "merge") and extraArgs.
+: Attribute set with `strategy` (`"override"` or `"merge"`) and `extraArgs`.
 
 paths
 : List of directories to merge.
@@ -310,6 +310,14 @@ fresh.myMethod ./src
 ## `imp.imports` {#imp.imports}
 
 Build a modules list from mixed items. Handles paths, registry nodes, and modules.
+
+For registry nodes or paths that import to attrsets with `__module`,
+extracts just the `__module`. For functions that are "registry wrappers"
+(take `inputs` arg and return attrsets with `__module`), wraps them to
+extract `__module` from the result.
+
+This allows registry modules to declare `__inputs` and `__overlays`
+without polluting the module system.
 
 ### Example
 
@@ -345,7 +353,7 @@ json = (imp.withLib lib).analyze.toJson graph
 ## `imp.buildRegistry` {#imp.buildRegistry}
 
 Build registry from a directory.
-Returns nested attrset where each directory has \_\_path and child entries.
+Returns nested attrset where each directory has `__path` and child entries.
 
 ### Arguments
 
@@ -408,7 +416,7 @@ registry
 ## `imp.toPath` {#imp.toPath}
 
 Get the path from a registry value.
-Works for both direct paths and registry nodes with \_\_path.
+Works for both direct paths and registry nodes with `__path`.
 
 ### Arguments
 
@@ -417,7 +425,7 @@ x
 
 ## `imp.isRegistryNode` {#imp.isRegistryNode}
 
-Check if a value is a registry node (has \_\_path).
+Check if a value is a registry node (has `__path`).
 
 ### Arguments
 
@@ -503,7 +511,7 @@ header
 
 Analyze a single configTree, returning nodes and edges.
 
-The path should be a directory. We scan it for .nix files and
+The path should be a directory. We scan it for `.nix` files and
 read each one to check for registry references.
 
 Note: We only collect refs from files directly in this directory,
@@ -530,7 +538,7 @@ sources
 : List of { id, path } for each source tree.
 
 strategy
-: Merge strategy ("merge" or "override").
+: Merge strategy (`"merge"` or `"override"`).
 
 ## `imp.analyzeRegistry` {#imp.analyzeRegistry}
 
@@ -556,12 +564,12 @@ registry
 : Registry attrset to analyze.
 
 outputsSrc
-: Optional path to outputs directory (e.g., imp.src). Files here that
+: Optional path to outputs directory (e.g., `imp.src`). Files here that
 reference registry paths will be included as output nodes.
 
 ## `imp.scanDir` {#imp.scanDir}
 
-Scan a directory and build a list of all .nix files with their logical paths.
+Scan a directory and build a list of all `.nix` files with their logical paths.
 
 ### Example
 
@@ -576,43 +584,6 @@ root
 : Root directory to scan.
 
 ## Visualize
-
-## `imp.toHtml` {#imp.toHtml}
-
-Generate interactive HTML visualization using force-graph library.
-
-Features: hover highlighting, cluster coloring, animated dashed directional edges, auto-fix on drag.
-
-### Arguments
-
-graph
-: Graph with nodes and edges from analyze functions.
-
-## `imp.toHtmlWith` {#imp.toHtmlWith}
-
-Generate interactive HTML visualization with custom colors.
-
-Features: hover highlighting, cluster coloring, animated dashed directional edges, auto-fix on drag.
-
-### Arguments
-
-graph
-: Graph with nodes and edges from analyze functions.
-
-colors (optional)
-: Custom cluster colors attrset. Merged with defaults.
-
-### Example
-
-```nix
-toHtmlWith {
-  inherit graph;
-  colors = {
-    "modules.custom" = "#ff5722";
-    "outputs.packages" = "#009688";
-  };
-}
-```
 
 ## `imp.toJson` {#imp.toJson}
 
@@ -632,97 +603,89 @@ Convert graph to JSON without paths (avoids store path issues with special chars
 graph
 : Graph with nodes and edges from analyze functions.
 
-## `imp.mkVisualizeScript` {#imp.mkVisualizeScript}
+## Export Sinks
 
-Build a shell script that outputs the graph in the requested format.
+## `imp.collectExports` {#imp.collectExports}
 
-Can be called two ways:
+Scan directories for `__exports` declarations and collect them.
 
-1. With pre-computed graph (for flakeModule - fast, no runtime eval):
-   mkVisualizeScript { pkgs, graph }
+Recursively scans .nix files for `__exports` attribute declarations
+and collects them, tracking source paths. Returns an attrset mapping
+sink keys to lists of export records.
 
-1. With impSrc and nixpkgsFlake (standalone - runtime eval of arbitrary path):
-   mkVisualizeScript { pkgs, impSrc, nixpkgsFlake }
+Only attrsets with `__exports` are collected. For functions that need
+to declare exports, use the `__functor` pattern:
 
-### Arguments
-
-pkgs
-: nixpkgs package set (for writeShellScript).
-
-graph
-: Pre-analyzed graph (optional, for pre-computed mode).
-
-impSrc
-: Path to imp source (optional, for standalone mode).
-
-nixpkgsFlake
-: Nixpkgs flake reference string (optional, for standalone mode).
-
-name
-: Script name (default: "imp-vis").
-
-## Migrate
-
-## `imp.extractRegistryRefs` {#imp.extractRegistryRefs}
-
-Extract all registry.X.Y.Z references from a file's content.
-Returns list of dotted paths like [ "home.alice" "modules.nixos" ]
-
-### Arguments
-
-name
-: The registry attribute name to search for (e.g., "registry").
-
-content
-: String content of the file to search.
-
-## `imp.suggestNewPath` {#imp.suggestNewPath}
-
-Find the best matching new path for an old path.
-Uses simple heuristics: matching leaf name, similar structure.
-
-### Arguments
-
-validPaths
-: List of currently valid registry paths.
-
-oldPath
-: The broken path to find a replacement for.
-
-## `imp.detectRenames` {#imp.detectRenames}
-
-Detect renames by scanning files and comparing against registry.
-
-Returns an attrset containing:
-
-- brokenRefs: list of broken registry references found
-- suggestions: attrset mapping old paths to suggested new paths
-- affectedFiles: list of files that need updating
-- commands: list of ast-grep commands to run
-- script: shell script to run all migrations
+```nix
+{
+  __exports."nixos.role.desktop" = {
+    value = { services.pipewire.enable = true; };
+    strategy = "merge";
+  };
+  __functor = _: { inputs, ... }: { __module = ...; };
+}
+```
 
 ### Example
 
 ```nix
-detectRenames {
-  registry = myRegistry;
-  paths = [ ./nix/outputs ./nix/flake ];
-}
+imp.collectExports ./registry
+# => {
+#   "nixos.role.desktop" = [
+#     {
+#       source = "/path/to/audio.nix";
+#       value = { services.pipewire.enable = true; };
+#       strategy = "merge";
+#     }
+#   ];
+# }
 ```
 
 ### Arguments
 
-registry
-: The current registry attrset to check against.
+pathOrPaths
+: Directory/file path, or list of paths, to scan for \_\_exports declarations.
 
-paths
-: List of paths to scan for registry references.
+## `imp.buildExportSinks` {#imp.buildExportSinks}
 
-astGrep
-: Path to the ast-grep binary (default: "ast-grep").
+Build export sinks from collected exports.
 
-registryName
-: The attribute name used for the registry (default: "registry").
+Takes collected exports and merges them according to their strategies,
+producing a nested attrset of sinks. Each sink contains merged values
+and metadata about contributors.
+
+### Example
+
+```nix
+buildExportSinks {
+  lib = nixpkgs.lib;
+  collected = imp.collectExports ./registry;
+  sinkDefaults = {
+    "nixos.*" = "merge";
+    "hm.*" = "merge";
+  };
+}
+# => {
+#   nixos.role.desktop = {
+#     __module = { ... };
+#     __meta = { contributors = [...]; strategy = "merge"; };
+#   };
+# }
+```
+
+### Arguments
+
+lib
+: nixpkgs lib for merge operations.
+
+collected
+: Output from collectExports.
+
+sinkDefaults
+: Optional attrset mapping glob patterns to default strategies.
+
+enableDebug
+: Include \_\_meta with contributor info (default: true).
 
 ## Standalone Utilities
 
@@ -734,17 +697,36 @@ Recursively scans .nix files for `__inputs` attribute declarations
 and merges them into a single attrset. Detects conflicts when the
 same input name has different definitions in different files.
 
+Only attrsets with `__inputs` are collected. For files that need to
+be functions (e.g., to receive `inputs` at runtime), use the `__functor`
+pattern so `__inputs` is accessible without calling the function:
+
+```nix
+{
+  __inputs.foo.url = "github:foo/bar";
+  __functor = _: { inputs, ... }: inputs.foo.lib.something;
+}
+```
+
+Accepts either a single path or a list of paths. When given multiple
+paths, all are scanned and merged with conflict detection.
+
 ### Example
 
 ```nix
+# Single path
 imp.collectInputs ./outputs
 # => { treefmt-nix = { url = "github:numtide/treefmt-nix"; }; }
+
+# Multiple paths
+imp.collectInputs [ ./outputs ./registry ]
+# => { treefmt-nix = { ... }; nur = { ... }; }
 ```
 
 ### Arguments
 
-path
-: Directory or file path to scan for \_\_inputs declarations.
+pathOrPaths
+: Directory/file path, or list of paths, to scan for \_\_inputs declarations.
 
 ## `imp.collectAndFormatFlake` {#imp.collectAndFormatFlake}
 

@@ -52,6 +52,90 @@ let
   */
   collectInputs = import ./collect-inputs.nix;
 
+  /**
+    Scan directories for `__exports` declarations and collect them.
+
+    Recursively scans .nix files for `__exports` attribute declarations
+    and collects them, tracking source paths. Returns an attrset mapping
+    sink keys to lists of export records.
+
+    Only attrsets with `__exports` are collected. For functions that need
+    to declare exports, use the `__functor` pattern:
+
+    ```nix
+    {
+      __exports."nixos.role.desktop" = {
+        value = { services.pipewire.enable = true; };
+        strategy = "merge";
+      };
+      __functor = _: { inputs, ... }: { __module = ...; };
+    }
+    ```
+
+    # Example
+
+    ```nix
+    imp.collectExports ./registry
+    # => {
+    #   "nixos.role.desktop" = [
+    #     {
+    #       source = "/path/to/audio.nix";
+    #       value = { services.pipewire.enable = true; };
+    #       strategy = "merge";
+    #     }
+    #   ];
+    # }
+    ```
+
+    # Arguments
+
+    pathOrPaths
+    : Directory/file path, or list of paths, to scan for __exports declarations.
+  */
+  collectExports = import ./collect-exports.nix;
+
+  /**
+    Build export sinks from collected exports.
+
+    Takes collected exports and merges them according to their strategies,
+    producing a nested attrset of sinks. Each sink contains merged values
+    and metadata about contributors.
+
+    # Example
+
+    ```nix
+    buildExportSinks {
+      lib = nixpkgs.lib;
+      collected = imp.collectExports ./registry;
+      sinkDefaults = {
+        "nixos.*" = "merge";
+        "hm.*" = "merge";
+      };
+    }
+    # => {
+    #   nixos.role.desktop = {
+    #     __module = { ... };
+    #     __meta = { contributors = [...]; strategy = "merge"; };
+    #   };
+    # }
+    ```
+
+    # Arguments
+
+    lib
+    : nixpkgs lib for merge operations.
+
+    collected
+    : Output from collectExports.
+
+    sinkDefaults
+    : Optional attrset mapping glob patterns to default strategies.
+
+    enableDebug
+    : Include __meta with contributor info (default: true).
+  */
+  buildExportSinks = import ./export-sinks.nix;
+
   flakeFormat = import ./format-flake.nix;
   inherit (flakeFormat) formatInputs formatFlake;
 
@@ -155,6 +239,8 @@ let
             # Standalone utilities available on imp object
             inherit
               collectInputs
+              collectExports
+              buildExportSinks
               formatInputs
               formatFlake
               collectAndFormatFlake
@@ -169,6 +255,24 @@ let
                 throw "You need to call withLib before using registry."
               else
                 (registryModule { lib = updated.lib; }).buildRegistry path;
+
+            # Convenience: collect and build export sinks with current lib
+            # Usage: (imp.withLib lib).exportSinks { ... } ./nix
+            exportSinks =
+              args: pathOrPaths:
+              if updated.lib == null then
+                throw "You need to call withLib before using exportSinks."
+              else
+                let
+                  collected = collectExports pathOrPaths;
+                in
+                buildExportSinks (
+                  {
+                    lib = updated.lib;
+                    inherit collected;
+                  }
+                  // args
+                );
           };
       };
     in
