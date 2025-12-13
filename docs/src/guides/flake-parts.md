@@ -1,6 +1,6 @@
 # Using with flake-parts
 
-The flake-parts module turns your directory structure into flake outputs. Point it at an outputs directory and files become attributes.
+The flake-parts module maps your directory structure to flake outputs. Point it at an outputs directory and files become attributes:
 
 ```nix
 {
@@ -14,10 +14,7 @@ The flake-parts module turns your directory structure into flake outputs. Point 
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ imp.flakeModules.default ];
       systems = [ "x86_64-linux" "aarch64-linux" ];
-      imp = {
-        src = ./outputs;
-        registry.src = ./registry;  # optional
-      };
+      imp.src = ./outputs;
     };
 }
 ```
@@ -34,34 +31,38 @@ outputs/
   overlays.nix        # flake.overlays
 ```
 
-Files in `perSystem/` are evaluated once per system in your `systems` list. They receive `pkgs` instantiated for that system, along with `system`, `self'`, and `inputs'` (the per-system projections).
+Files in `perSystem/` evaluate once per system in your `systems` list. They receive `pkgs` instantiated for that system, along with `system`, `self'`, and `inputs'` (the per-system projections). Flake-level files outside `perSystem/` receive `lib`, `self`, `inputs`, and `config`.
 
 ## perSystem files
 
 ```nix
 # outputs/perSystem/packages.nix
-{ pkgs, lib, system, self, self', inputs, inputs', ... }:
+{ pkgs, self, inputs, ... }:
 {
   hello = pkgs.hello;
-  myTool = pkgs.callPackage ./my-tool.nix {};
+  myPackage = inputs.bun2nix.lib.mkBunPackage {
+    inherit pkgs;
+    src = self + "/src";
+    lockfile = self + "/bun.lock";
+  };
 }
 ```
 
-These are the standard flake-parts arguments. If you've set `imp.registry.src`, files also receive `imp` and `registry`.
+The `self + "/path"` pattern references files relative to the flake root. Since `self` is the flake itself (a path-like value), concatenating strings produces paths anywhere in your repository. Use this for lockfiles, source directories, or anything outside the current file's directory.
 
 ## Flake-level files
 
-Files outside `perSystem/` receive a simpler set of arguments:
-
 ```nix
 # outputs/nixosConfigurations/server.nix
-{ lib, self, inputs, registry, imp, ... }:
+{ lib, self, inputs, registry, ... }:
 lib.nixosSystem {
   system = "x86_64-linux";
-  specialArgs = { inherit inputs registry imp; };
+  specialArgs = { inherit inputs registry; };
   modules = [ /* ... */ ];
 }
 ```
+
+These don't receive `pkgs` since there's no single system context. If you need pkgs, call `inputs.nixpkgs.legacyPackages.${system}` explicitly.
 
 ## Adding a registry
 
@@ -72,67 +73,25 @@ imp = {
 };
 ```
 
-Now every file receives `registry`, and you can reference modules by name rather than path.
+With `registry.src` set, every file receives `registry`, letting you reference modules by name rather than path. See [The Registry](../concepts/registry.md) for the full pattern.
 
-## Optional modules
+## Troubleshooting
 
-Beyond `flakeModules.default`, imp provides optional modules for documentation and visualization. Each requires an additional input to keep the core lockfile minimal.
+The most common error looks like this:
 
-**Documentation** generates API reference from your Nix source files:
-
-```nix
-{
-  inputs.docgen.url = "github:imp-nix/imp.docgen";
-  inputs.docgen.inputs.nixpkgs.follows = "nixpkgs";
-
-  outputs = inputs@{ flake-parts, imp, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [
-        imp.flakeModules.default
-        imp.flakeModules.docs
-      ];
-      imp.docs = {
-        manifest = ./docs/manifest.nix;
-        srcDir = ./src;
-        siteDir = ./docs;
-      };
-    };
-}
+```
+error: attribute 'bun2nix' missing
+at /nix/store/.../outputs/perSystem/packages.nix:6:3
 ```
 
-**Visualization** renders interactive dependency graphs:
+Three typical causes. First, you might be destructuring an input directly instead of accessing it through `inputs`:
 
 ```nix
-{
-  inputs.imp-graph.url = "github:imp-nix/imp.graph";
-  inputs.imp-graph.inputs.nixpkgs.follows = "nixpkgs";
+# Wrong: bun2nix isn't a direct argument
+{ bun2nix, ... }: bun2nix.lib.mkPackage { }
 
-  outputs = inputs@{ flake-parts, imp, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [
-        imp.flakeModules.default
-        imp.flakeModules.visualize
-      ];
-    };
-}
+# Correct: access through inputs
+{ inputs, ... }: inputs.bun2nix.lib.mkPackage { }
 ```
 
-See [Registry Visualization](./registry-visualization.md) for details on reading the generated graphs.
-
-## Multiple directories
-
-imp merges with anything else in your flake-parts config:
-
-```nix
-{
-  imports = [ imp.flakeModules.default ];
-  imp.src = ./outputs;
-
-  # Additional outputs defined directly
-  perSystem = { pkgs, ... }: {
-    packages.extra = pkgs.hello;
-  };
-}
-```
-
-Manual definitions override imp-loaded ones when both define the same attribute.
+Second, check for typos in argument names. Third, flake-level files (outside `perSystem/`) don't receive `pkgs` or `system`. If you're trying to use those in a non-perSystem file, restructure your code or access them explicitly.
